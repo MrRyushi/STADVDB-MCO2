@@ -1,17 +1,45 @@
 document.addEventListener("DOMContentLoaded", function() {
     const insertForm = document.querySelector("#insertForm");
+    const searchForm = document.querySelector("#searchForm"); // Add this line
+
     insertForm.addEventListener('submit', (event) => {
         event.preventDefault();
         const formData = new FormData(insertForm);
-        
-        /// Convert formData to JSON
+        const jsonData = convertFormDataToJson(formData);
+        postData('/insertAppt', jsonData)
+            .then(data => {
+                console.log(data);
+                alert('Data inserted successfully!');
+            })
+            .catch(error => {
+                console.error('There was a problem with the fetch operation:', error);
+            });
+    });
+
+    searchForm.addEventListener('submit', (event) => { // Add this block
+        event.preventDefault();
+        const formData = new FormData(searchForm);
+        const jsonData = convertFormDataToJson(formData);
+        postData('/searchAppt', jsonData)
+            .then(data => {
+                console.log(data);
+                displaySearchResults(data); // Define this function to display search results
+            })
+            .catch(error => {
+                console.error('There was a problem with the fetch operation:', error);
+            });
+    });
+
+    function convertFormDataToJson(formData) {
         const jsonData = {};
         formData.forEach((value, key) => {
             jsonData[key] = value;
         });
+        return jsonData;
+    }
 
-        // Make a POST request to the backend
-        fetch('/insertAppt', {
+    function postData(url, jsonData) {
+        return fetch(url, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -23,14 +51,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 return response.json();
             }
             throw new Error('Network response was not ok.');
-        })
-        .then(data => {
-            // Handle the response from the backend
-            console.log(data);
-            alert('Data inserted successfully!');
-        })
-        .catch(error => {
-            console.error('There was a problem with the fetch operation:', error);
         });
-    });
-})
+    }
+});

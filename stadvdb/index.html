@@ -1,12 +1,12 @@
 <!doctype html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vite App</title>
-  </head>
-  <body>
+</head>
+<body>
     <div>
         <form id="insertForm">
             <input id="patientName" name="patientName" placeholder="Patient name" type="text"/>
@@ -16,6 +16,22 @@
             <button type="submit">Insert Appointment</button>
         </form>
     </div>
+
+    <div>
+        <h2>Search Appointments</h2>
+        <form id="searchForm">
+            <input id="searchPatientName" name="patientName" placeholder="Search by Patient name" type="text"/>
+            <input id="searchDate" name="apptdate" placeholder="Search by Date" type="date"/>
+            <input id="searchHospital" name="hospitalname" placeholder="Search by Hospital Name" type="text"/>
+            <input id="searchDoctor" name="doctorname" placeholder="Search by Doctor Name" type="text"/>
+            <button type="submit">Search</button>
+        </form>
+    </div>
+
+    <div id="searchResults">
+        <!-- Search results will be displayed here -->
+    </div>
+
     <script type="module" src="/main.js"></script>
-  </body>
+</body>
 </html>
