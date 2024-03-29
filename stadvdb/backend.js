@@ -1,21 +1,25 @@
 // Requiring modules
 const express = require('express');
+const cors = require('cors');
 const { createPool } = require('mysql');
 
 const app = express();
+app.use(express.json());
+app.use(cors()); // Enable CORS for all routes
+
 const pool = createPool({
     host: "localhost",
     user: "root",
     password: "admin12345678",
-    database: "appointments",
+    database: "stadvdb_mco2",
     connectionLimit: 10
 });
 
 // Route to handle inserting data
 app.post('/insertAppt', (req, res) => {
     const data = req.body;
-
-    pool.query('INSERT INTO your_table_name (patientName, apptdate, hospitalname, doctorname) VALUES (?, ?, ?, ?)', data, (err, result) => {
+    console.log(data)
+    pool.query(`INSERT INTO appointments (apptid, apptdate, pxid, pxage, pxgender, doctorid, hospitalname, hospitalcity, hospitalprovince, hospitalregion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [data.apptid, data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion], (err, result) => {
         if (err) {
             console.error('Error inserting data:', err);
             res.status(500).json({ error: 'Error inserting data' });

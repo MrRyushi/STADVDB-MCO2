@@ -12,6 +12,7 @@
   },
   "main": "main.js",
   "dependencies": {
+    "cors": "^2.8.5",
     "esbuild": "^0.20.2",
     "expres": "^0.0.5",
     "express": "^4.19.2",

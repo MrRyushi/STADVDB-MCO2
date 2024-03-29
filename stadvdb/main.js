@@ -2,11 +2,29 @@ document.addEventListener("DOMContentLoaded", function() {
     const insertForm = document.querySelector("#insertForm");
     const searchForm = document.querySelector("#searchForm"); // Add this line
 
+    // function to fetch url from backend
+    function postData(url, jsonData) {
+        return fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(jsonData)
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            throw new Error('Network response was not ok.');
+        });
+    }
+
+    // insert appointment form
     insertForm.addEventListener('submit', (event) => {
         event.preventDefault();
         const formData = new FormData(insertForm);
         const jsonData = convertFormDataToJson(formData);
-        postData('/insertAppt', jsonData)
+        postData('http://localhost:3000/insertAppt', jsonData)
             .then(data => {
                 console.log(data);
                 alert('Data inserted successfully!');
@@ -16,7 +34,8 @@ document.addEventListener("DOMContentLoaded", function() {
             });
     });
 
-    searchForm.addEventListener('submit', (event) => { // Add this block
+    // search appointment form
+    searchForm.addEventListener('submit', (event) => { 
         event.preventDefault();
         const formData = new FormData(searchForm);
         const jsonData = convertFormDataToJson(formData);
@@ -36,21 +55,5 @@ document.addEventListener("DOMContentLoaded", function() {
             jsonData[key] = value;
         });
         return jsonData;
-    }
-
-    function postData(url, jsonData) {
-        return fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(jsonData)
-        })
-        .then(response => {
-            if (response.ok) {
-                return response.json();
-            }
-            throw new Error('Network response was not ok.');
-        });
     }
 });
