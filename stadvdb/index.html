@@ -8,6 +8,7 @@
 </head>
 <body>
     <div>
+        <h2>Insert Appointment</h2>
         <form id="insertForm">
             <input id="apptid" name="apptid" placeholder="Appointment ID" type="text"/>
             <input id="apptdate" name="apptdate" placeholder="Date of Appointment" type="date"/>
@@ -34,9 +35,39 @@
         </form>
     </div>
 
+    <div>
+        <h2>Update Appointment</h2>
+        <form id="updateForm">
+            <input id="updatePatientName" name="patientName" placeholder="Patient name" type="text"/>
+            <input id="updateApptdate" name="apptdate" placeholder="Date of Appointment" type="date"/>
+            <input id="updateHospitalname" name="hospitalname" placeholder="Hospital Name" type="text"/>
+            <input id="updateDoctorname" name="doctorname" placeholder="Doctor Name" type="text"/>
+            <button type="submit">Update Appointment</button>
+        </form>
+    </div>
+
     <div id="searchResults">
         <!-- Search results will be displayed here -->
     </div>
+
+    <h2>Text-Based Reports</h2>
+
+    <!-- Total Count of Appointments-->
+    <div>
+        <label for="totalAppointments">Total Count Appointments:</label>
+        <select id="totalAppointments">
+            <option value="all">All Regions</option>
+            <option value="luzon">Luzon</option>
+            <option value="visayas">Visayas</option>
+            <option value="mindanao">Mindanao</option>
+        </select>
+        <button id="generateReport">Generate Report</button>
+    </div>
+
+    <div id="reportsResults">
+        <!-- Report results will be displayed here -->
+    </div>
+
 
     <script type="module" src="/main.js"></script>
 </body>

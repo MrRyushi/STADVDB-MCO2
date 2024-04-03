@@ -66,6 +66,31 @@ app.post('/searchAppt', (req, res) => {
     });
 });
 
+app.post('/totalCountAppointments', (req, res) => {
+    // Extract the region parameter from the request body
+    const { region } = req.body;
+
+    // Construct SQL query to calculate total appointments count
+    let query = 'SELECT COUNT(*) AS totalAppointments FROM your_table_name';
+
+    // Add a WHERE clause based on the selected region, if it's not "all"
+    if (region !== 'all') {
+        query += ` WHERE region = '${region}'`;
+    }
+
+    pool.query(query, (err, result) => {
+        if (err) {
+            console.error('Error counting total appointments:', err);
+            res.status(500).json({ error: 'Error counting total appointments' });
+        } else {
+            const totalAppointments = result[0].totalAppointments;
+
+            console.log('Total Count of Appointments:', totalAppointments);
+            res.json({ totalAppointments: totalAppointments });
+        }
+    });
+});
+
 // Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
