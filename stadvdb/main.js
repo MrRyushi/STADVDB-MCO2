@@ -60,15 +60,30 @@ document.addEventListener("DOMContentLoaded", function() {
         event.preventDefault();
         const formData = new FormData(updateForm);
         const jsonData = convertFormDataToJson(formData);
-        postData('http://localhost:3000/updateAppt', jsonData)
-            .then(data => {
-                console.log(data);
-                alert('Data updated successfully!');
-            })
-            .catch(error => {
-                console.error('There was a problem with the fetch operation:', error);
-            });
+        fetch('http://localhost:3000/updateAppt', {
+            method: 'PUT', // Use PUT method
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(jsonData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.text().then(text => {
+                    throw new Error(`Status: ${response.status}, Body: ${text}`);
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log(data);
+            alert('Data updated successfully!');
+        })
+        .catch(error => {
+            console.error('There was a problem with the fetch operation:', error);
+        });
     });
+
 
 
     // Text-based reports functions

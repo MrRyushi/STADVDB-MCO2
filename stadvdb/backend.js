@@ -52,6 +52,23 @@ const vismin = createPool({
         });
     }
 
+    function syncUpdateAppointmentData(destinationPool, data) {
+        checkAppointmentExists(destinationPool, data.apptid, (appointmentExists) => {
+            if (!appointmentExists) {
+                console.log(`Appointment ID ${data.apptid} does not exist in destination pool`);
+            } else {
+                console.log(destinationPool);
+                destinationPool.query(`UPDATE appointment SET apptdate = ?, pxid = ?, pxage = ?, pxgender = ?, doctorid = ?, hospitalname = ?, hospitalcity = ?, hospitalprovince = ?, hospitalregion = ? WHERE apptid = ?`, [data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion, data.apptid], (err, result) => {
+                    if (err) {
+                        console.error('Error updating data in destination pool:', err);
+                    } else {
+                        console.log('Data updated in destination pool successfully:', result);
+                    }
+                });
+            }
+        });
+    }
+
 
     /// Route to handle inserting data
     app.post('/insertAppt', async (req, res) => {
@@ -131,6 +148,13 @@ app.put('/updateAppt', async (req, res) => {
     const data = req.body;
     console.log(data);
 
+    // Check if the required fields are present in the request body
+    const requiredFields = ['apptid', 'apptdate', 'pxid', 'pxage', 'pxgender', 'doctorid', 'hospitalname', 'hospitalcity', 'hospitalprovince', 'hospitalregion'];
+    for (const field of requiredFields) {
+        if (!(field in data)) {
+            return res.status(400).json({ error: `Missing required field: ${field}` });
+        }
+    }
     let sourcePool = central;
     let destinationPool = determinePool(data)
 
