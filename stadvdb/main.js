@@ -24,6 +24,7 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         });
     }
+    
 
     // insert appointment form
     insertForm.addEventListener('submit', (event) => {
@@ -163,4 +164,95 @@ document.addEventListener("DOMContentLoaded", function() {
         return jsonData;
     }
 
+
+    function fetchData(url) {
+        return fetch(url)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                return data;
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+                throw error;
+            });
+    }
+
+    // Function to populate dropdown
+    function populateDropdown() {
+        fetchData('http://localhost:3000/getApptIds')
+            .then(data => {
+                // Process the data received from the backend
+                console.log('Data received:', data);
+                // Call functions or update UI with the data
+
+                var dropdown = document.getElementById('dropdown');
+                dropdown.innerHTML = ''; // Clear existing options
+
+                // Iterate through the first 10 elements in the data array
+                for (let i = 0; i < Math.min(data.length, 10); i++) {
+                    const row = data[i];
+                    // Create an option element for each row
+                    var option = document.createElement('option');
+                    option.value = row.apptid; // Set the value of the option to the appointment ID
+                    option.text = row.apptid; // Set the text of the option to the appointment ID
+                    dropdown.appendChild(option); // Append the option to the dropdown
+                }
+            })
+            .catch(error => {
+                // Handle errors here
+                console.error('Error:', error);
+                // Display error message or take appropriate action
+            });
+    }
+
+
+    // Attach event listener to the dropdown select element
+    document.getElementById('dropdown').addEventListener('focus', function() {
+        // Call the populateDropdown function when the select is focused
+        populateDropdown();
+    });
+    
+    document.getElementById('updatePatientAge').addEventListener('click', function() {
+        let apptIdToUpdate = document.getElementById('dropdown').value;
+        let ageToUpdate = document.getElementById('updateAge').value;
+    
+        // Create an object with the data to send to the backend
+        const data = {
+            id: apptIdToUpdate,
+            newAge: ageToUpdate
+        };
+    
+        // Send a POST request to the backend
+        fetch('http://localhost:3000/updateAge', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Handle success response from the backend
+            console.log('Success:', data);
+            // Optionally, update the UI or display a success message
+        })
+        .catch(error => {
+            // Handle error from the backend or network error
+            console.error('Error:', error);
+            // Optionally, display an error message to the user
+        });
+    });
+    
+
+    
 });

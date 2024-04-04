@@ -5,6 +5,7 @@ const { createPool, pool } = require('mysql2');
 
 const app = express();
 app.use(express.json());
+app.use(express.static('public'));
 app.use(cors()); // Enable CORS for all routes
 
 const central = createPool({
@@ -34,91 +35,92 @@ const vismin = createPool({
     connectionLimit: 10
 });
 
-    // Function to synchronize appointment data from luzon/vismin to central
-    function syncInsertAppointmentData(destinationPool, data) {
-        checkAppointmentExists(destinationPool, data.apptid, (appointmentExists) => {
-            if (appointmentExists) {
-                console.log(`Appointment ID ${data.apptid} already exists in destination pool`);
-            } else {
-                console.log(destinationPool);
-                destinationPool.query(`INSERT INTO appointment (apptid, apptdate, pxid, pxage, pxgender, doctorid, hospitalname, hospitalcity, hospitalprovince, hospitalregion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [data.apptid, data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion], (err, result) => {
-                    if (err) {
-                        console.error('Error inserting data into destination pool:', err);
-                    } else {
-                        console.log('Data inserted into destination pool successfully:', result);
-                    }
-                });
-            }
-        });
-    }
-
-    function syncUpdateAppointmentData(destinationPool, data) {
-        checkAppointmentExists(destinationPool, data.apptid, (appointmentExists) => {
-            if (!appointmentExists) {
-                console.log(`Appointment ID ${data.apptid} does not exist in destination pool`);
-            } else {
-                console.log(destinationPool);
-                destinationPool.query(`UPDATE appointment SET apptdate = ?, pxid = ?, pxage = ?, pxgender = ?, doctorid = ?, hospitalname = ?, hospitalcity = ?, hospitalprovince = ?, hospitalregion = ? WHERE apptid = ?`, [data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion, data.apptid], (err, result) => {
-                    if (err) {
-                        console.error('Error updating data in destination pool:', err);
-                    } else {
-                        console.log('Data updated in destination pool successfully:', result);
-                    }
-                });
-            }
-        });
-    }
-
-
-    /// Route to handle inserting data
-    app.post('/insertAppt', async (req, res) => {
-        const data = req.body;
-        console.log(data);
-    
-        let sourcePool = central;
-        let destinationPool = determinePool(data)
-    
-        // Check if the appointment ID already exists
-        checkAppointmentExists(sourcePool, data.apptid, (appointmentExists) => {
-            if (appointmentExists) {
-                return res.status(400).json({ error: 'Appointment ID already exists' });
-            } else {
-                sourcePool.query(`INSERT INTO appointment (apptid, apptdate, pxid, pxage, pxgender, doctorid, hospitalname, hospitalcity, hospitalprovince, hospitalregion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [data.apptid, data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion], (err, result) => {
-                    if (err) {
-                        console.error('Error inserting data into source:', err);
-                        return res.status(500).json({ error: 'Error inserting data into source' });
-                    } else {
-                        console.log('Data inserted into source successfully:', result);
-                
-                        // Synchronize inserted data 
-                        if (destinationPool != central) {
-                            syncInsertAppointmentData(destinationPool, data);
-                        }
-                        
-                        res.json({ message: 'Data inserted successfully' });
-                    }
-                });
-            }
-        });
-    });
-    
-    // Function to check if an appointment ID exists
-    function checkAppointmentExists(pool, apptid, callback) {
-        pool.query('SELECT * FROM appointment WHERE apptid = ?', [apptid], (err, result) => {
-            if (err) {
-                console.error('Error checking appointment ID:', err);
-                callback(false);
-            } else {
-                // If any record is returned, the appointment ID exists
-                const appointmentExists = result.length > 0;
-                if (appointmentExists) {
-                    console.log(`Appointment ID ${apptid} already exists.`);
+// Function to synchronize appointment data from luzon/vismin to central
+function syncInsertAppointmentData(destinationPool, data) {
+    checkAppointmentExists(destinationPool, data.apptid, (appointmentExists) => {
+        if (appointmentExists) {
+            console.log(`Appointment ID ${data.apptid} already exists in destination pool`);
+        } else {
+            console.log(destinationPool);
+            destinationPool.query(`INSERT INTO appointment (apptid, apptdate, pxid, pxage, pxgender, doctorid, hospitalname, hospitalcity, hospitalprovince, hospitalregion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [data.apptid, data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion], (err, result) => {
+                if (err) {
+                    console.error('Error inserting data into destination pool:', err);
+                } else {
+                    console.log('Data inserted into destination pool successfully:', result);
                 }
-                callback(appointmentExists); // Return the actual existence status
-            }
-        });
-    }
+            });
+        }
+    });
+}
 
+function syncUpdateAppointmentData(destinationPool, data) {
+    checkAppointmentExists(destinationPool, data.apptid, (appointmentExists) => {
+        if (!appointmentExists) {
+            console.log(`Appointment ID ${data.apptid} does not exist in destination pool`);
+        } else {
+            console.log(destinationPool);
+            destinationPool.query(`UPDATE appointment SET apptdate = ?, pxid = ?, pxage = ?, pxgender = ?, doctorid = ?, hospitalname = ?, hospitalcity = ?, hospitalprovince = ?, hospitalregion = ? WHERE apptid = ?`, [data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion, data.apptid], (err, result) => {
+                if (err) {
+                    console.error('Error updating data in destination pool:', err);
+                } else {
+                    console.log('Data updated in destination pool successfully:', result);
+                }
+            });
+        }
+    });
+}
+
+
+// Function to check if an appointment ID exists
+function checkAppointmentExists(pool, apptid, callback) {
+    pool.query('SELECT * FROM appointment WHERE apptid = ?', [apptid], (err, result) => {
+        if (err) {
+            console.error('Error checking appointment ID:', err);
+            callback(false);
+        } else {
+            // If any record is returned, the appointment ID exists
+            const appointmentExists = result.length > 0;
+            if (appointmentExists) {
+                console.log(`Appointment ID ${apptid} already exists.`);
+            }
+            callback(appointmentExists); // Return the actual existence status
+        }
+    });
+}
+
+/// Route to handle inserting data
+app.post('/insertAppt', async (req, res) => {
+    const data = req.body;
+    console.log(data);
+
+    let sourcePool = central;
+    let destinationPool = determinePool(data)
+
+    // Check if the appointment ID already exists
+    checkAppointmentExists(sourcePool, data.apptid, (appointmentExists) => {
+        if (appointmentExists) {
+            return res.status(400).json({ error: 'Appointment ID already exists' });
+        } else {
+            sourcePool.query(`INSERT INTO appointment (apptid, apptdate, pxid, pxage, pxgender, doctorid, hospitalname, hospitalcity, hospitalprovince, hospitalregion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [data.apptid, data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion], (err, result) => {
+                if (err) {
+                    console.error('Error inserting data into source:', err);
+                    return res.status(500).json({ error: 'Error inserting data into source' });
+                } else {
+                    console.log('Data inserted into source successfully:', result);
+            
+                    // Synchronize inserted data 
+                    if (destinationPool != central) {
+                        syncInsertAppointmentData(destinationPool, data);
+                    }
+                    
+                    res.json({ message: 'Data inserted successfully' });
+                }
+            });
+        }
+    });
+});
+    
+    
 
 // Route to handle searching data
 app.post('/searchAppt', (req, res) => {
@@ -202,31 +204,40 @@ app.put('/updateAppt', (req, res) => {
 */
 
 
-// app.post('/totalCountAppointments', (req, res) => {
-//     // Extract the region parameter from the request body
-//     const { region } = req.body;
+// Route to fetch data from MySQL and send to frontend
+app.get('/getApptIds', (req, res) => {
+    const query = 'SELECT apptid FROM central.appointment'; // Modify this query according to your requirement
+  
+    central.query(query, (err, results) => {
+      if (err) {
+        console.error('Error executing MySQL query: ' + err.stack);
+        res.status(500).send('Internal Server Error');
+        return;
+      }
+      // Send data to frontend as JSON
+      res.json(results);
+    });
+  });
 
-//     // Construct SQL query to calculate total appointments count
-//     let query = 'SELECT COUNT(*) AS totalAppointments FROM appointment';
+  // Route to handle updating a column in MySQL
+app.post('/updateAge', (req, res) => {
+    const id = req.body.id; // Get the ID from the request body
+    const newAge= req.body.newAge; // Get the new value from the request body
 
-//     // Add a WHERE clause based on the selected region, if it's not "all"
-//     if (region !== 'all') {
-//         query += ` WHERE region = '${region}'`;
-//     }
+    // Update query
+    const query = `UPDATE appointment SET pxage = ? WHERE apptid = ?`;
 
-//     pool.query(query, (err, result) => {
-//         if (err) {
-//             console.error('Error counting total appointments:', err);
-//             res.status(500).json({ error: 'Error counting total appointments' });
-//         } else {
-//             const totalAppointments = result[0].totalAppointments;
-
-//             console.log('Total Count of Appointments:', totalAppointments);
-//             res.json({ totalAppointments: totalAppointments });
-//         }
-//     });
-// });
-
+    // Execute the update query
+    central.query(query, [newAge, id], (error, results, fields) => {
+        if (error) {
+            console.error('Error updating column:', error);
+            res.status(500).json({ error: 'Error updating column' });
+            return;
+        }
+        console.log('Column updated successfully');
+        res.json({ message: 'Column updated successfully' });
+    });
+});
 
 function determinePool(data) {
     switch (data.hospitalregion) {
