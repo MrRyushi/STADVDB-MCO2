@@ -156,6 +156,8 @@ document.addEventListener("DOMContentLoaded", function() {
     });
     
 
+    const selectedRegion = document.getElementById('regionSelect').value
+
     function convertFormDataToJson(formData) {
         const jsonData = {};
         formData.forEach((value, key) => {
@@ -221,19 +223,39 @@ document.addEventListener("DOMContentLoaded", function() {
         let apptIdToUpdate = document.getElementById('dropdown').value;
         let ageToUpdate = document.getElementById('updateAge').value;
     
-        // Create an object with the data to send to the backend
-        const data = {
-            id: apptIdToUpdate,
-            newAge: ageToUpdate
-        };
-    
-        // Send a POST request to the backend
-        fetch('http://localhost:3000/updateAge', {
+        // Fetch hospital region by appointment ID
+        fetch('http://localhost:3000/getHospitalRegion', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(data)
+            body: JSON.stringify({ apptid: apptIdToUpdate })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Extract hospital region from response data
+            const hospitalRegion = data.hospitalRegion;
+    
+            // Create an object with the data to send to the backend for updating age
+            const updateData = {
+                id: apptIdToUpdate,
+                newAge: ageToUpdate,
+                hospitalRegion: hospitalRegion // Pass hospital region to the backend
+            };
+    
+            // Send a POST request to update age with hospital region included
+            return fetch('http://localhost:3000/updateAge', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updateData)
+            });
         })
         .then(response => {
             if (!response.ok) {
@@ -252,7 +274,6 @@ document.addEventListener("DOMContentLoaded", function() {
             // Optionally, display an error message to the user
         });
     });
-    
 
     
 });

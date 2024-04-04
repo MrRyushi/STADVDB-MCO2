@@ -206,7 +206,7 @@ app.put('/updateAppt', (req, res) => {
 
 // Route to fetch data from MySQL and send to frontend
 app.get('/getApptIds', (req, res) => {
-    const query = 'SELECT apptid FROM central.appointment'; // Modify this query according to your requirement
+    const query = 'SELECT apptid, hospitalregion FROM central.appointment'; // Modify this query according to your requirement
   
     central.query(query, (err, results) => {
       if (err) {
@@ -220,24 +220,108 @@ app.get('/getApptIds', (req, res) => {
   });
 
   // Route to handle updating a column in MySQL
-app.post('/updateAge', (req, res) => {
-    const id = req.body.id; // Get the ID from the request body
-    const newAge= req.body.newAge; // Get the new value from the request body
-
-    // Update query
+  app.post('/updateAge', (req, res) => {
+    const id = req.body.id;
+    const newAge = req.body.newAge;
+    const hospitalRegion = req.body.hospitalRegion;
     const query = `UPDATE appointment SET pxage = ? WHERE apptid = ?`;
+    let destinationPool;
 
-    // Execute the update query
-    central.query(query, [newAge, id], (error, results, fields) => {
-        if (error) {
-            console.error('Error updating column:', error);
-            res.status(500).json({ error: 'Error updating column' });
-            return;
-        }
-        console.log('Column updated successfully');
+    switch (hospitalRegion) {
+        case 'Ilocos Region (Region I)':
+        case 'Cagayan Valley (Region II)':
+        case 'Central Luzon (Region III)':
+        case 'CALABARZON (Region IV-A)':
+        case 'Bicol Region (Region V)':
+        case 'National Capital Region (NCR)':
+        case 'Cordillera Administrative Region (CAR)':
+        case 'MIMAROPA Region':
+            destinationPool = luzon; break;
+        case 'Western Visayas (Region VI)':
+        case 'Central Visayas (Region VII)':
+        case 'Eastern Visayas (Region VIII)':
+        case 'Zamboanga Peninsula (Region IX)':
+        case 'Northern Mindanao (Region X)':
+        case 'Davao Region (Region XI)':
+        case 'SOCCSKSARGEN (Cotabato Region) (XII)':
+        case 'Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)':
+        case 'Caraga (Region XIII)':
+            destinationPool = vismin; break;
+        default:
+            // If no specific region is specified or unknown, default to central
+            destinationPool = central
+            break;
+    }
+    
+
+    // Use Promise.all to wait for both queries to complete
+    Promise.all([
+        // First query
+        new Promise((resolve, reject) => {
+            central.query(query, [newAge, id], (error, results, fields) => {
+                if (error) {
+                    console.error('Error updating column:', error);
+                    reject('Error updating column');
+                    return;
+                }
+                console.log('Column updated successfully');
+                resolve();
+            });
+        }),
+        // Second query
+        new Promise((resolve, reject) => {
+            destinationPool.query(query, [newAge, id], (error, results, fields) => {
+                if (error) {
+                    console.error('Error updating column:', error);
+                    reject('Error updating column');
+                    return;
+                }
+                console.log('Column updated successfully');
+                resolve();
+            });
+        })
+    ])
+    .then(() => {
+        // Send response after both queries have completed
         res.json({ message: 'Column updated successfully' });
+    })
+    .catch(error => {
+        // Handle errors
+        console.error('Error:', error);
+        res.status(500).json({ error: error });
     });
 });
+
+
+// Route to get hospital region by appointment ID
+app.post('/getHospitalRegion', (req, res) => {
+    const { apptid } = req.body;
+
+    // Query to fetch hospital region by appointment ID
+    const query = 'SELECT hospitalregion FROM appointment WHERE apptid = ?';
+
+    // Execute the query
+    central.query(query, [apptid], (err, results) => {
+        if (err) {
+            console.error('Error executing MySQL query:', err);
+            res.status(500).json({ error: 'Internal Server Error' });
+            return;
+        }
+
+        // Check if appointment ID exists
+        if (results.length === 0) {
+            res.status(404).json({ error: 'Appointment ID not found' });
+            return;
+        }
+
+        // Extract hospital region from the result
+        const hospitalRegion = results[0].hospitalregion;
+
+        // Send hospital region as JSON response
+        res.json({ hospitalRegion });
+    });
+});
+
 
 function determinePool(data) {
     switch (data.hospitalregion) {
@@ -249,7 +333,7 @@ function determinePool(data) {
         case 'National Capital Region (NCR)':
         case 'Cordillera Administrative Region (CAR)':
         case 'MIMAROPA Region':
-            return luzon;
+            return luzon; 
         case 'Western Visayas (Region VI)':
         case 'Central Visayas (Region VII)':
         case 'Eastern Visayas (Region VIII)':

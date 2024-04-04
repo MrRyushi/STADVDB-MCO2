@@ -147,6 +147,13 @@
     </div>
 
     <h1>Step 2: Concurrency Control</h1>
+    <div>
+        <select id="regionSelect">
+            <option value="luzon">Luzon</option>
+            <option value="visayas">Visayas</option>
+            <option value="mindanao">Mindanao</option>
+        </select>        
+    </div>
 
     <h2>Case 1: Reading the Same Data Item</h2>
 
@@ -156,7 +163,7 @@
         <select id="dropdown">
             <option value="" disabled selected>Select an Appointment ID</option>
         </select>
-        <input id="updateAge" placeholder="New Age of Patient" type="number">
+        <input id="updateAge" placeholder="New Age of Patient" type="number"/>
         <button id="updatePatientAge">Update</button>
     </div>
 
