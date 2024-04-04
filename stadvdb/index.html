@@ -48,6 +48,7 @@
     </div>
 
     <div>
+        <!--
         <h2>Update Appointment</h2>
         <form id="updateForm">
             <input id="apptid" name="apptid" placeholder="Appointment ID" type="text"/>
@@ -67,6 +68,30 @@
             </select>
             <button type="submit">Update Appointment</button>
         </form>
+        -->
+        <h2>Update</h2>
+        <form id="updateForm">
+            <input id="updateApptid" name="updateApptid" placeholder="Appointment ID" type="text"/>
+            <button id="checkApptid" type="button">Check Appointment ID</button>
+            <div id="updateFields" style="display: none;">
+                <input id="updateApptdate" name="updateApptdate" placeholder="Date of Appointment" type="date"/>
+                <input id="updatePxid" name="updatePxid" placeholder="Patient ID" type="text"/>
+                <input id="updatePxage" name="updatePxage" placeholder="Patient Age" type="number"/>
+                <input id="updatePxgender" name="updatePxgender" placeholder="Patient Gender" type="text"/>
+                <input id="updateDoctorid" name="updateDoctorid" placeholder="Doctor ID" type="text"/>
+                <input id="updateHospitalname" name="updateHospitalname" placeholder="Hospital Name" type="text"/>
+                <input id="updateHospitalcity" name="updateHospitalcity" placeholder="Hospital City" type="text"/>
+                <input id="updateHospitalprovince" name="updateHospitalprovince" placeholder="Hospital Province" type="text"/>
+                <input id="updateHospitalregion" name="updateHospitalregion" placeholder="Hospital Region" type="text"/>
+                <select id="insertIsland">
+                    <option value="luzon">Luzon</option>
+                    <option value="visayas">Visayas</option>
+                    <option value="mindanao">Mindanao</option>
+                </select>
+                <button id="submitUpdate" type="submit">Update Appointment</button>
+            </div>
+        </form>
+        
     </div>
 
 
