@@ -10,8 +10,8 @@ app.use(cors()); // Enable CORS for all routes
 const pool = createPool({
     host: "localhost",
     user: "root",
-    password: "admin12345678",
-    database: "stadvdb_mco2",
+    password: "12345678",
+    database: "mco2",
     connectionLimit: 10
 });
 
@@ -29,6 +29,43 @@ app.post('/insertAppt', (req, res) => {
         }
     });
 });
+
+// Route to handle updating appointment information after verifying appointment ID exists
+app.put('/verifyAndUpdateAppt/:apptid', (req, res) => {
+    const apptid = req.params.apptid;
+    const updatedData = req.body;
+
+    // First, check if the appointment ID exists
+    pool.query('SELECT * FROM appointments WHERE apptid = ?', [apptid], (err, result) => {
+        if (err) {
+            console.error('Error checking appointment ID:', err);
+            return res.status(500).json({ error: 'Error checking appointment ID' });
+        }
+
+        if (result.length > 0) {
+            // Appointment ID exists, proceed with update
+            pool.query(`UPDATE appointments
+                        SET apptdate = ?, pxid = ?, pxage = ?, pxgender = ?, doctorid = ?, hospitalname = ?, hospitalcity = ?, hospitalprovince = ?, hospitalregion = ?
+                        WHERE apptid = ?`,
+                        [updatedData.apptdate, updatedData.pxid, updatedData.pxage, updatedData.pxgender, updatedData.doctorid, updatedData.hospitalname, updatedData.hospitalcity, updatedData.hospitalprovince, updatedData.hospitalregion, apptid],
+                        (updateErr, updateResult) => {
+                if (updateErr) {
+                    console.error('Error updating data:', updateErr);
+                    return res.status(500).json({ error: 'Error updating data' });
+                } else {
+                    console.log('Data updated successfully:', updateResult);
+                    return res.json({ message: 'Data updated successfully' });
+                }
+            });
+        } else {
+            // Appointment ID does not exist
+            console.log('Appointment ID does not exist:', apptid);
+            return res.status(404).json({ message: 'Appointment ID does not exist' });
+        }
+    });
+});
+
+
 
 // Route to handle searching data
 app.post('/searchAppt', (req, res) => {

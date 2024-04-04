@@ -2,6 +2,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const insertForm = document.querySelector("#insertForm");
     const searchForm = document.querySelector("#searchForm"); 
     const updateForm = document.querySelector("#updateForm");
+    const checkApptidButton = document.getElementById("checkApptid");
     const totalCountAppointments = document.querySelector("#totalAppointments"); 
 
     // function to fetch url from backend
@@ -51,6 +52,8 @@ document.addEventListener("DOMContentLoaded", function() {
             });
     });
 
+    /*
+    //update appointment form
     updateForm.addEventListener('submit', (event) => {
         event.preventDefault();
         const formData = new FormData(document.querySelector("#updateForm"));
@@ -63,6 +66,62 @@ document.addEventListener("DOMContentLoaded", function() {
             .catch(error => {
                 console.error('There was a problem with the fetch operation:', error);
             });
+    });
+    */
+    //CheckAppt
+    checkApptidButton.addEventListener("click", () => {
+        // Get the value of the appointment ID input field
+        const apptid = document.getElementById("updateApptid").value;
+
+        // Make a request to the backend to check if the appointment ID exists
+        fetch(`http://localhost:3000/verifyAndUpdateAppt/${apptid}`, {
+            method: "GET",
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            throw new Error('Network response was not ok.');
+        })
+        .then(data => {
+            // If appointment ID exists, show the update fields
+            document.getElementById("updateFields").style.display = "block";
+        })
+        .catch(error => {
+            // If appointment ID does not exist, show an error message
+            console.error('There was a problem with the fetch operation:', error);
+            alert("Appointment ID does not exist.");
+        });
+    });
+
+
+    // update appointment form
+    updateForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const formData = new FormData(updateForm);
+        const jsonData = convertFormDataToJson(formData);
+
+        // Change the method to 'PUT' and URL to your update endpoint
+        fetch('http://localhost:3000/verifyAndUpdateAppt/' + jsonData.apptid, {
+            method: 'PUT', // Note the method change here
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(jsonData)
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            throw new Error('Network response was not ok.');
+        })
+        .then(data => {
+            console.log(data);
+            alert('Appointment updated successfully!');
+        })
+        .catch(error => {
+            console.error('There was a problem with the fetch operation:', error);
+        });
     });
 
     // Text-based reports functions

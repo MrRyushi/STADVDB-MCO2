@@ -4,9 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="3cc77950-4d22-4bad-91f3-d03d6ab2ab0c" name="Changes" comment="">
+    <list default="true" id="b310af73-f6a1-4e82-9489-9de66aaa6737" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/stadvdb/backend.js" beforeDir="false" afterPath="$PROJECT_DIR$/stadvdb/backend.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/stadvdb/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/stadvdb/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/stadvdb/main.js" beforeDir="false" afterPath="$PROJECT_DIR$/stadvdb/main.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -19,9 +21,9 @@
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 3
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 3
+}</component>
   <component name="ProjectId" id="2eay6EPtkxeh2cnqZeWntZgWuht" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -31,14 +33,29 @@
   "keyToString": {
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "insert",
+    "git-widget-placeholder": "Sam",
     "kotlin-language-version-configured": "true"
   }
 }]]></component>
+  <component name="RunManager">
+    <configuration default="true" type="JetRunConfigurationType">
+      <module name="STADVDB-MCO2" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
+      <module name="STADVDB-MCO2" />
+      <option name="filePath" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+  </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
-      <changelist id="3cc77950-4d22-4bad-91f3-d03d6ab2ab0c" name="Changes" comment="" />
+      <changelist id="b310af73-f6a1-4e82-9489-9de66aaa6737" name="Changes" comment="" />
       <created>1712156807441</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
