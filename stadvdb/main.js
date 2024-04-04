@@ -17,10 +17,14 @@ document.addEventListener("DOMContentLoaded", function() {
         .then(response => {
             if (response.ok) {
                 return response.json();
+            } else if (response.status === 400) {
+                throw new Error('Appointment ID already exists');
+            } else {
+                throw new Error('Network response was not ok.');
             }
-            throw new Error('Network response was not ok.');
         });
     }
+    
     
 
     // insert appointment form
@@ -53,77 +57,62 @@ document.addEventListener("DOMContentLoaded", function() {
             });
     });
 
-    /*
+
+    // Check if appointment ID exists before updating
+    checkApptidButton.addEventListener("click", () => {
+        // Get the value of the appointment ID input field
+        const apptid = document.getElementById("updateApptid").value;
+
+        // Make a request to the backend to check if the appointment ID exists
+        fetch(`http://localhost:3000/verifyAndUpdateAppt/${apptid}`, {
+            method: "GET",
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            throw new Error('Network response was not ok.');
+        })
+        .then(data => {
+            // If appointment ID exists, show the update fields
+            document.getElementById("updateFields").style.display = "block";
+        })
+        .catch(error => {
+            // If appointment ID does not exist, show an error message
+            console.error('There was a problem with the fetch operation:', error);
+            alert("Appointment ID does not exist.");
+        });
+    });
+
+
+    // update appointment form
     updateForm.addEventListener('submit', (event) => {
         event.preventDefault();
-        const formData = new FormData(document.querySelector("#updateForm"));
+        const formData = new FormData(updateForm);
         const jsonData = convertFormDataToJson(formData);
-        postData('/updateAppt', jsonData)
-            .then(data => {
-                console.log(data);
-                alert('Appointment updated successfully!');
-            })
-            .catch(error => {
-                console.error('There was a problem with the fetch operation:', error);
-            });
+
+        // Change the method to 'PUT' and URL to your update endpoint
+        fetch('http://localhost:3000/verifyAndUpdateAppt/' + jsonData.apptid, {
+            method: 'PUT', // Note the method change here
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(jsonData)
+        })
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            throw new Error('Network response was not ok.');
+        })
+        .then(data => {
+            console.log(data);
+            alert('Appointment updated successfully!');
+        })
+        .catch(error => {
+            console.error('There was a problem with the fetch operation:', error);
+        });
     });
-    */
-
-    //CheckAppt
-        checkApptidButton.addEventListener("click", () => {
-            // Get the value of the appointment ID input field
-            const apptid = document.getElementById("updateApptid").value;
-
-            // Make a request to the backend to check if the appointment ID exists
-            fetch(`http://localhost:3000/verifyAndUpdateAppt/${apptid}`, {
-                method: "GET",
-            })
-            .then(response => {
-                if (response.ok) {
-                    return response.json();
-                }
-                throw new Error('Network response was not ok.');
-            })
-            .then(data => {
-                // If appointment ID exists, show the update fields
-                document.getElementById("updateFields").style.display = "block";
-            })
-            .catch(error => {
-                // If appointment ID does not exist, show an error message
-                console.error('There was a problem with the fetch operation:', error);
-                alert("Appointment ID does not exist.");
-            });
-        });
-
-
-        // update appointment form
-        updateForm.addEventListener('submit', (event) => {
-            event.preventDefault();
-            const formData = new FormData(updateForm);
-            const jsonData = convertFormDataToJson(formData);
-
-            // Change the method to 'PUT' and URL to your update endpoint
-            fetch('http://localhost:3000/verifyAndUpdateAppt/' + jsonData.apptid, {
-                method: 'PUT', // Note the method change here
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(jsonData)
-            })
-            .then(response => {
-                if (response.ok) {
-                    return response.json();
-                }
-                throw new Error('Network response was not ok.');
-            })
-            .then(data => {
-                console.log(data);
-                alert('Appointment updated successfully!');
-            })
-            .catch(error => {
-                console.error('There was a problem with the fetch operation:', error);
-            });
-        });
 
 
     // Text-based reports functions
@@ -171,8 +160,29 @@ document.addEventListener("DOMContentLoaded", function() {
             searchResultsContainer.textContent = 'No results found.';
         }
     }
+
+    // Get the clear search results button
+    const clearSearchResultsButton = document.getElementById('clearSearch');
+    // Add click event listener to the clear search results button
+    clearSearchResultsButton.addEventListener('click', function() {
+        console.log('Clear Search Field Button Clicked');
+        // Get the search results container
+        const searchResultsContainer = document.getElementById('searchResults');
+        // Clear the content of the search results container
+        searchResultsContainer.innerHTML = '';
+    });
+
+    const clearSearchFieldButton = document.getElementById('clearSearchField');
+
+    // Add click event listener to the clear search results button
+    clearSearchFieldButton.addEventListener('click', function() {
+        console.log('Clear Search Field Button Clicked');
+        // Get the appointment ID input field inside the search form
+        const apptidInput = searchForm.querySelector('#apptid');
+        // Clear the value of the input field
+        apptidInput.value = '';
+    });
     
-   
 
     function convertFormDataToJson(formData) {
         const jsonData = {};

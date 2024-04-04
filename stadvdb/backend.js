@@ -1,8 +1,7 @@
 // Requiring modules
 const express = require('express');
 const cors = require('cors');
-const { createPool } = require('mysql2');
-
+const { createPool, pool } = require('mysql2');
 
 const app = express();
 app.use(express.json());
@@ -35,63 +34,76 @@ const vismin = createPool({
     connectionLimit: 10
 });
 
-// Function to synchronize appointment data from luzon/vismin to central
-function syncAppointmentData(sourcePool, destinationPool, tableName) {
-    sourcePool.query(`SELECT * FROM ${tableName}`, (err, rows) => {
-        if (err) {
-            console.error('Error fetching data:', err);
-            return;
-        }
-
-        // Insert fetched rows into the central database
-        rows.forEach(row => {
-            destinationPool.query(`INSERT INTO ${tableName} VALUES (?)`, row, (insertErr, result) => {
-                if (insertErr) {
-                    console.error('Error inserting data into central:', insertErr);
-                } else {
-                    console.log('Data inserted into central successfully:', result);
-                }
-            });
+    // Function to synchronize appointment data from luzon/vismin to central
+    function syncInsertAppointmentData(destinationPool, data) {
+        checkAppointmentExists(destinationPool, data.apptid, (appointmentExists) => {
+            if (appointmentExists) {
+                console.log(`Appointment ID ${data.apptid} already exists in destination pool`);
+            } else {
+                console.log(destinationPool);
+                destinationPool.query(`INSERT INTO appointment (apptid, apptdate, pxid, pxage, pxgender, doctorid, hospitalname, hospitalcity, hospitalprovince, hospitalregion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [data.apptid, data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion], (err, result) => {
+                    if (err) {
+                        console.error('Error inserting data into destination pool:', err);
+                    } else {
+                        console.log('Data inserted into destination pool successfully:', result);
+                    }
+                });
+            }
         });
-    });
-}
-
-// Route to handle inserting data
-app.post('/insertAppt', (req, res) => {
-    const data = req.body;
-    console.log(data);
-
-    const region = req.body.region;
-    let sourcePool;
-
-    let port; // Declare variables to store host and port dynamically
-
-    if (region === 'luzon') {
-        sourcePool = luzon;
-        port = 20073;
-    } else if (region === 'visayas') {
-        sourcePool = vismin;
-        port = 20074;
-    } else {
-        res.status(400).json({ error: 'Invalid region' });
-        return;
     }
 
-    sourcePool.query(`INSERT INTO appointment (apptid, apptdate, pxid, pxage, pxgender, doctorid, hospitalname, hospitalcity, hospitalprovince, hospitalregion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [data.apptid, data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion], (err, result) => {
-        if (err) {
-            console.error('Error inserting data into source:', err);
-            res.status(500).json({ error: 'Error inserting data into source' });
-        } else {
-            console.log('Data inserted into source successfully:', result);
 
-            // Synchronize inserted data to central database
-            syncAppointmentData(sourcePool, central, 'appointments');
-
-            res.json({ message: 'Data inserted successfully' });
-
-        }
+    /// Route to handle inserting data
+    app.post('/insertAppt', async (req, res) => {
+        const data = req.body;
+        console.log(data);
+    
+        let sourcePool = central;
+        let destinationPool = determinePool(data)
+    
+        // Check if the appointment ID already exists
+        checkAppointmentExists(sourcePool, data.apptid, (appointmentExists) => {
+            if (appointmentExists) {
+                return res.status(400).json({ error: 'Appointment ID already exists' });
+            } else {
+                sourcePool.query(`INSERT INTO appointment (apptid, apptdate, pxid, pxage, pxgender, doctorid, hospitalname, hospitalcity, hospitalprovince, hospitalregion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [data.apptid, data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion], (err, result) => {
+                    if (err) {
+                        console.error('Error inserting data into source:', err);
+                        return res.status(500).json({ error: 'Error inserting data into source' });
+                    } else {
+                        console.log('Data inserted into source successfully:', result);
+                
+                        // Synchronize inserted data 
+                        if (destinationPool != central) {
+                            syncInsertAppointmentData(destinationPool, data);
+                        }
+                        
+                        res.json({ message: 'Data inserted successfully' });
+                    }
+                });
+            }
+        });
     });
-});
+    
+    // Function to check if an appointment ID exists
+    function checkAppointmentExists(pool, apptid, callback) {
+        pool.query('SELECT * FROM appointment WHERE apptid = ?', [apptid], (err, result) => {
+            if (err) {
+                console.error('Error checking appointment ID:', err);
+                callback(false);
+            } else {
+                // If any record is returned, the appointment ID exists
+                const appointmentExists = result.length > 0;
+                if (appointmentExists) {
+                    console.log(`Appointment ID ${apptid} already exists.`);
+                }
+                callback(appointmentExists); // Return the actual existence status
+            }
+        });
+    }
+    
+
+
 
 // Route to handle searching data
 app.post('/searchAppt', (req, res) => {
@@ -100,16 +112,13 @@ app.post('/searchAppt', (req, res) => {
     console.log('Received search request:', data);
     console.log(data)
 
-    // Determine which pool to use based on the region specified in the request
-    let poolToUse = determinePool(data)
+    let poolToUse = central
 
     // Construct SQL query to search only for apptid
     let query = `SELECT * FROM appointment WHERE apptid = '${data.apptid}'`;
-    const params = []
-
     
     // Execute the SQL query using the selected pool
-    poolToUse.query(query, params, (err, result) => {
+    poolToUse.query(query, (err, result) => {
         if (err) {
             console.error('Error searching data:', err);
             res.status(500).json({ error: 'Error searching data' });
@@ -179,21 +188,36 @@ app.put('/verifyAndUpdateAppt/:apptid', (req, res) => {
 //         }
 //     });
 // });
+
+
 function determinePool(data) {
-    switch (data.region) {
-        case 'SOCCSKSARGEN (Cotabato Region) (XII)':
-        case 'Central Visayas (VII)':
-            return vismin;
+    switch (data.hospitalregion) {
+        case 'Ilocos Region (Region I)':
+        case 'Cagayan Valley (Region II)':
+        case 'Central Luzon (Region III)':
+        case 'CALABARZON (Region IV-A)':
+        case 'Bicol Region (Region V)':
         case 'National Capital Region (NCR)':
-        case 'CALABARZON (IV-A)':
-        case 'Ilocos Region (I)':
-        case 'Central Luzon (III)':
+        case 'Cordillera Administrative Region (CAR)':
+        case 'MIMAROPA Region':
             return luzon;
+        case 'Western Visayas (Region VI)':
+        case 'Central Visayas (Region VII)':
+        case 'Eastern Visayas (Region VIII)':
+        case 'Zamboanga Peninsula (Region IX)':
+        case 'Northern Mindanao (Region X)':
+        case 'Davao Region (Region XI)':
+        case 'SOCCSKSARGEN (Cotabato Region) (XII)':
+        case 'Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)':
+        case 'Caraga (Region XIII)':
+            return vismin;
         default:
             // If no specific region is specified or unknown, default to central
-            return central;
+            return central
     }
 }
+
+
 // Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

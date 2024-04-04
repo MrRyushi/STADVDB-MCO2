@@ -14,16 +14,34 @@
             <input id="apptdate" name="apptdate" placeholder="Date of Appointment" type="date"/>
             <input id="pxid" name="pxid" placeholder="Patient ID" type="text"/>
             <input id="pxage" name="pxage" placeholder="Patient Age" type="number"/>
-            <input id="pxgender" name="pxgender" placeholder="Patient Gender" type="text"/>
+            <label for="pxgender">Patient Gender:</label>
+            <select id="pxgender" name="pxgender">
+                <option value="Female">Female</option>
+                <option value="Male">Male</option>
+            </select>
             <input id="doctorid" name="doctorid" placeholder="Doctor ID" type="text"/>
             <input id="hospitalname" name="hospitalname" placeholder="Hospital Name" type="text"/>
             <input id="hospitalcity" name="hospitalcity" placeholder="Hospital City" type="text"/>
             <input id="hospitalprovince" name="hospitalprovince" placeholder="Hospital Province" type="text"/>
-            <input id="hospitalregion" name="hospitalregion" placeholder="Hospital Region" type="text"/>
-            <select id="insertIsland">
-                <option value="luzon">Luzon</option>
-                <option value="visayas">Visayas</option>
-                <option value="mindanao">Mindanao</option>
+            <label for="hospitalregion">Hospital Region:</label>
+            <select id="hospitalregion" name="hospitalregion">
+                <option value="Ilocos Region (Region I)">Ilocos Region (Region I)</option>
+                <option value="Cagayan Valley (Region II)">Cagayan Valley (Region II)</option>
+                <option value="Central Luzon (Region III)">Central Luzon (Region III)</option>
+                <option value="CALABARZON (Region IV-A)">CALABARZON (Region IV-A)</option>
+                <option value="Bicol Region (Region V)">Bicol Region (Region V)</option>
+                <option value="National Capital Region (NCR)">National Capital Region (NCR)</option>
+                <option value="Cordillera Administrative Region (CAR)">Cordillera Administrative Region (CAR)</option>
+                <option value="MIMAROPA Region">MIMAROPA Region</option>
+                <option value="Western Visayas (Region VI)">Western Visayas (Region VI)</option>
+                <option value="Central Visayas (Region VII)">Central Visayas (Region VII)</option>
+                <option value="Eastern Visayas (Region VIII)">Eastern Visayas (Region VIII)</option>
+                <option value="Zamboanga Peninsula (Region IX)">Zamboanga Peninsula (Region IX)</option>
+                <option value="Northern Mindanao (Region X)">Northern Mindanao (Region X)</option>
+                <option value="Davao Region (Region XI)">Davao Region (Region XI)</option>
+                <option value="SOCCSKSARGEN (Cotabato Region) (XII)">SOCCSKSARGEN (Cotabato Region) (XII)</option>
+                <option value="Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)">Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)</option>
+                <option value="Caraga (Region XIII)">Caraga (Region XIII)</option>
             </select>
             <button type="submit">Insert Appointment</button>
         </form>
@@ -33,14 +51,10 @@
         <h2>Search Appointments</h2>
         <form id="searchForm">
             <input id="apptid" name="apptid" placeholder="Search by Appointment ID" type="text"/>
-            <select id="searchRegion">
-                <option value="all">All Regions</option>
-                <option value="luzon">Luzon</option>
-                <option value="visayas">Visayas</option>
-                <option value="mindanao">Mindanao</option>  
-            </select>
             <button type="submit">Search</button>
         </form>
+        <button id="clearSearchField">Clear Search Field</button>
+        <button id="clearSearch">Clear Search Results</button>
     </div>
 
     <div id="searchResults">
@@ -48,27 +62,6 @@
     </div>
 
     <div>
-        <!--
-        <h2>Update Appointment</h2>
-        <form id="updateForm">
-            <input id="apptid" name="apptid" placeholder="Appointment ID" type="text"/>
-            <input id="apptdate" name="apptdate" placeholder="Date of Appointment" type="date"/>
-            <input id="pxid" name="pxid" placeholder="Patient ID" type="text"/>
-            <input id="pxage" name="pxage" placeholder="Patient Age" type="number"/>
-            <input id="pxgender" name="pxgender" placeholder="Patient Gender" type="text"/>
-            <input id="doctorid" name="doctorid" placeholder="Doctor ID" type="text"/>
-            <input id="hospitalname" name="hospitalname" placeholder="Hospital Name" type="text"/>
-            <input id="hospitalcity" name="hospitalcity" placeholder="Hospital City" type="text"/>
-            <input id="hospitalprovince" name="hospitalprovince" placeholder="Hospital Province" type="text"/>
-            <input id="hospitalregion" name="hospitalregion" placeholder="Hospital Region" type="text"/>
-            <select id="insertIsland">
-                <option value="luzon">Luzon</option>
-                <option value="visayas">Visayas</option>
-                <option value="mindanao">Mindanao</option>
-            </select>
-            <button type="submit">Update Appointment</button>
-        </form>
-        -->
         <h2>Update</h2>
         <form id="updateForm">
             <input id="updateApptid" name="updateApptid" placeholder="Appointment ID" type="text"/>
