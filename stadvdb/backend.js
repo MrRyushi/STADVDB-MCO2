@@ -101,8 +101,6 @@ const vismin = createPool({
             }
         });
     }
-    
-
 
 
 // Route to handle searching data
@@ -129,40 +127,56 @@ app.post('/searchAppt', (req, res) => {
     });
 });
 
-// Route to handle updating appointment information after verifying appointment ID exists
-app.put('/verifyAndUpdateAppt/:apptid', (req, res) => {
-    const apptid = req.params.apptid;
-    const updatedData = req.body;
+app.put('/updateAppt', async (req, res) => {
+    const data = req.body;
+    console.log(data);
 
-    // First, check if the appointment ID exists
-    pool.query('SELECT * FROM appointments WHERE apptid = ?', [apptid], (err, result) => {
-        if (err) {
-            console.error('Error checking appointment ID:', err);
-            return res.status(500).json({ error: 'Error checking appointment ID' });
-        }
+    let sourcePool = central;
+    let destinationPool = determinePool(data)
 
-        if (result.length > 0) {
-            // Appointment ID exists, proceed with update
-            pool.query(`UPDATE appointments
-                        SET apptdate = ?, pxid = ?, pxage = ?, pxgender = ?, doctorid = ?, hospitalname = ?, hospitalcity = ?, hospitalprovince = ?, hospitalregion = ?
-                        WHERE apptid = ?`,
-                        [updatedData.apptdate, updatedData.pxid, updatedData.pxage, updatedData.pxgender, updatedData.doctorid, updatedData.hospitalname, updatedData.hospitalcity, updatedData.hospitalprovince, updatedData.hospitalregion, apptid],
-                        (updateErr, updateResult) => {
-                if (updateErr) {
-                    console.error('Error updating data:', updateErr);
-                    return res.status(500).json({ error: 'Error updating data' });
+    // Check if the appointment ID already exists
+    checkAppointmentExists(sourcePool, data.apptid, (appointmentExists) => {
+        if (!appointmentExists) {
+            return res.status(400).json({ error: 'Appointment ID does not exist' });
+        } else {
+            sourcePool.query(`UPDATE appointment SET apptdate = ?, pxid = ?, pxage = ?, pxgender = ?, doctorid = ?, hospitalname = ?, hospitalcity = ?, hospitalprovince = ?, hospitalregion = ? WHERE apptid = ?`, [data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion, data.apptid], (err, result) => {
+                if (err) {
+                    console.error('Error updating data in source:', err);
+                    return res.status(500).json({ error: 'Error updating data in source' });
                 } else {
-                    console.log('Data updated successfully:', updateResult);
-                    return res.json({ message: 'Data updated successfully' });
+                    console.log('Data updated in source successfully:', result);
+
+                    // Synchronize updated data
+                    if (destinationPool != central) {
+                        syncUpdateAppointmentData(destinationPool, data); // Make sure you have this function defined
+                    }
+
+                    res.json({ message: 'Data updated successfully' });
                 }
             });
-        } else {
-            // Appointment ID does not exist
-            console.log('Appointment ID does not exist:', apptid);
-            return res.status(404).json({ message: 'Appointment ID does not exist' });
         }
     });
 });
+
+/*
+// Route to handle updating appointment information after verifying appointment ID exists
+app.put('/updateAppt', (req, res) => {
+    const updatedData = req.body;
+    const apptid = updatedData.apptid;
+    central.query(`UPDATE appointment SET apptdate = ?, pxid = ?, pxage = ?, pxgender = ?, doctorid = ?, hospitalname = ?, hospitalcity = ?, hospitalprovince = ?, hospitalregion = ? WHERE apptid = ?`,
+    [updatedData.apptdate, updatedData.pxid, updatedData.pxage, updatedData.pxgender, updatedData.doctorid, updatedData.hospitalname, updatedData.hospitalcity, updatedData.hospitalprovince, updatedData.hospitalregion, apptid],
+    (err, result) => {
+        if (err) {
+            console.error('Error updating appointment:', err);
+            res.status(500).json({ error: 'Error updating appointment' });
+        } else {
+            console.log('Updated appointment:', result);
+            res.json({ message: 'Appointment updated successfully' });
+        }
+    });
+});
+*/
+
 
 // app.post('/totalCountAppointments', (req, res) => {
 //     // Extract the region parameter from the request body
