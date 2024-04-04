@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // function to fetch url from backend
     function postData(url, jsonData) {
-        return fetch(url, {
+        return fetch(url, { // Construct the full URL including the port
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -20,6 +20,7 @@ document.addEventListener("DOMContentLoaded", function() {
             throw new Error('Network response was not ok.');
         });
     }
+    
 
     // insert appointment form
     insertForm.addEventListener('submit', (event) => {
@@ -41,13 +42,13 @@ document.addEventListener("DOMContentLoaded", function() {
         event.preventDefault();
         const formData = new FormData(searchForm);
         const jsonData = convertFormDataToJson(formData);
-        postData('/searchAppt', jsonData)
+        postData('http://localhost:3000/searchAppt', jsonData)
             .then(data => {
                 console.log(data);
                 displaySearchResults(data); // Define this function to display search results
             })
             .catch(error => {
-                console.error('There was a problem with the fetch operation:', error);
+                console.error('There was a problem with the fetch operation:', error.message);
             });
     });
 
@@ -83,6 +84,36 @@ document.addEventListener("DOMContentLoaded", function() {
             });
     }
 
+    
+    function displaySearchResults(results) {
+        const searchResultsContainer = document.getElementById('searchResults');
+        searchResultsContainer.innerHTML = ''; // Clear previous search results
+    
+        // Check if results are not empty
+        if (results && results.length > 0) {
+            // Create an unordered list to hold the search results
+            const ul = document.createElement('ul');
+    
+            // Iterate through each search result
+            results.forEach(result => {
+                // Create a list item for each result
+                const li = document.createElement('li');
+                li.textContent = `Appointment ID: ${result.apptid}, Date: ${result.apptdate}, Patient ID: ${result.pxid}, Gender: ${result.pxgender}, Doctor ID: ${result.doctorid}, Hospital: ${result.hospitalname}, City: ${result.hospitalcity}, Province: ${result.hospitalprovince}, Region: ${result.hospitalregion}`;
+    
+                // Append the list item to the unordered list
+                ul.appendChild(li);
+            });
+    
+            // Append the unordered list to the search results container
+            searchResultsContainer.appendChild(ul);
+        } else {
+            // If no results found, display a message
+            searchResultsContainer.textContent = 'No results found.';
+        }
+    }
+    
+   
+
     function convertFormDataToJson(formData) {
         const jsonData = {};
         formData.forEach((value, key) => {
@@ -91,19 +122,4 @@ document.addEventListener("DOMContentLoaded", function() {
         return jsonData;
     }
 
-    function postData(url, jsonData) {
-        return fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(jsonData)
-        })
-        .then(response => {
-            if (response.ok) {
-                return response.json();
-            }
-            throw new Error('Network response was not ok.');
-        });
-    }
 });

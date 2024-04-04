@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite App</title>
+    <title>STADVDB MCO2</title>
 </head>
 <body>
     <div>
@@ -20,6 +20,11 @@
             <input id="hospitalcity" name="hospitalcity" placeholder="Hospital City" type="text"/>
             <input id="hospitalprovince" name="hospitalprovince" placeholder="Hospital Province" type="text"/>
             <input id="hospitalregion" name="hospitalregion" placeholder="Hospital Region" type="text"/>
+            <select id="insertIsland">
+                <option value="luzon">Luzon</option>
+                <option value="visayas">Visayas</option>
+                <option value="mindanao">Mindanao</option>
+            </select>
             <button type="submit">Insert Appointment</button>
         </form>
     </div>
@@ -27,28 +32,44 @@
     <div>
         <h2>Search Appointments</h2>
         <form id="searchForm">
-            <input id="searchPatientName" name="patientName" placeholder="Search by Patient name" type="text"/>
-            <input id="searchDate" name="apptdate" placeholder="Search by Date" type="date"/>
-            <input id="searchHospital" name="hospitalname" placeholder="Search by Hospital Name" type="text"/>
-            <input id="searchDoctor" name="doctorname" placeholder="Search by Doctor Name" type="text"/>
+            <input id="apptid" name="apptid" placeholder="Search by Appointment ID" type="text"/>
+            <select id="searchRegion">
+                <option value="all">All Regions</option>
+                <option value="luzon">Luzon</option>
+                <option value="visayas">Visayas</option>
+                <option value="mindanao">Mindanao</option>  
+            </select>
             <button type="submit">Search</button>
-        </form>
-    </div>
-
-    <div>
-        <h2>Update Appointment</h2>
-        <form id="updateForm">
-            <input id="updatePatientName" name="patientName" placeholder="Patient name" type="text"/>
-            <input id="updateApptdate" name="apptdate" placeholder="Date of Appointment" type="date"/>
-            <input id="updateHospitalname" name="hospitalname" placeholder="Hospital Name" type="text"/>
-            <input id="updateDoctorname" name="doctorname" placeholder="Doctor Name" type="text"/>
-            <button type="submit">Update Appointment</button>
         </form>
     </div>
 
     <div id="searchResults">
         <!-- Search results will be displayed here -->
     </div>
+
+    <div>
+        <h2>Update Appointment</h2>
+        <form id="updateForm">
+            <input id="apptid" name="apptid" placeholder="Appointment ID" type="text"/>
+            <input id="apptdate" name="apptdate" placeholder="Date of Appointment" type="date"/>
+            <input id="pxid" name="pxid" placeholder="Patient ID" type="text"/>
+            <input id="pxage" name="pxage" placeholder="Patient Age" type="number"/>
+            <input id="pxgender" name="pxgender" placeholder="Patient Gender" type="text"/>
+            <input id="doctorid" name="doctorid" placeholder="Doctor ID" type="text"/>
+            <input id="hospitalname" name="hospitalname" placeholder="Hospital Name" type="text"/>
+            <input id="hospitalcity" name="hospitalcity" placeholder="Hospital City" type="text"/>
+            <input id="hospitalprovince" name="hospitalprovince" placeholder="Hospital Province" type="text"/>
+            <input id="hospitalregion" name="hospitalregion" placeholder="Hospital Region" type="text"/>
+            <select id="insertIsland">
+                <option value="luzon">Luzon</option>
+                <option value="visayas">Visayas</option>
+                <option value="mindanao">Mindanao</option>
+            </select>
+            <button type="submit">Update Appointment</button>
+        </form>
+    </div>
+
+
 
     <h2>Text-Based Reports</h2>
 
