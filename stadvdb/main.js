@@ -350,5 +350,84 @@ document.addEventListener("DOMContentLoaded", function() {
             // Optionally, display an error message to the user
         });
     });
-    
+
+
+    // Function to update button text and color
+    function updateButton(buttonId, region) {
+        
+        const button = document.getElementById(buttonId);
+        if (regions[region]) {
+            button.textContent = `Turn Off ${region.charAt(0).toUpperCase() + region.slice(1)}`;
+            button.style.backgroundColor = 'green';
+        } else {
+            button.textContent = `Turn On ${region.charAt(0).toUpperCase() + region.slice(1)}`;
+            button.style.backgroundColor = 'red';
+        }
+    }
+
+    let regions = {}; // Define regions variable globally to make it accessible to all functions
+
+    // Fetch the regions data from the backend
+    fetch('http://localhost:3000/regions')
+    .then(response => response.json())
+    .then(data => {
+        console.log(data.regions)
+        regions = data.regions; // Update the global regions variable with the fetched data
+        // Update buttons initially
+        for (let region in regions) {
+            updateButton(`${region}Btn`, region);
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching regions data:', error);
+    });
+
+    // Function to update button text and color
+    function updateButton(buttonId, region) {
+        const button = document.getElementById(buttonId);
+        if (regions[region]) {
+            button.innerHTML = `Turn Off ${region.charAt(0).toUpperCase() + region.slice(1)}`;
+            button.style.backgroundColor = 'green';
+        } else {
+            button.innerHTML = `Turn On ${region.charAt(0).toUpperCase() + region.slice(1)}`;
+            button.style.backgroundColor = 'red';
+        }
+    }
+
+    // Function to toggle region value and update button
+    function toggleRegion(region) {
+        regions[region] = !regions[region]; // Update frontend data
+        updateButton(`${region}Btn`, region); // Update button UI
+
+        // Update backend data
+        fetch('http://localhost:3000/toggleRegion', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ region: region, value: regions[region] })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log(data.message); // Log success message from backend
+        })
+        .catch(error => {
+            console.error('Error toggling region:', error);
+        });
+    }
+
+    // Add event listeners to buttons
+    document.getElementById('centralBtn').addEventListener('click', function() {
+        toggleRegion('central');
+    });
+
+    document.getElementById('luzonBtn').addEventListener('click', function() {
+        toggleRegion('luzon');
+    });
+
+    document.getElementById('visayas_mindanaoBtn').addEventListener('click', function() {
+        toggleRegion('visayas_mindanao');
+    });
+
+
 });

@@ -2,6 +2,8 @@
 const express = require('express');
 const cors = require('cors');
 const { createPool, pool } = require('mysql2');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 app.use(express.json());
@@ -221,15 +223,15 @@ app.get('/getApptIds', (req, res) => {
 
  //Function for ISOLATION LEVEL SERIALIZABLE
  global.setSerializable = function(pool) {
-     console.log('setSerializable called');
+     //console.log('setSerializable called');
      return new Promise((resolve, reject) => {
          pool.query('SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', (error, results, fields) => {
-             console.log('pool.query callback called');
+            //console.log('pool.query callback called');
              if (error) {
                  console.error('Error setting transaction isolation level:', error);
                  reject(error);
              } else {
-                 console.log('Transaction isolation level set to SERIALIZABLE');
+                //console.log('Transaction isolation level set to SERIALIZABLE');
                  resolve();
              }
          });
@@ -253,7 +255,7 @@ app.post('/readAge', (req, res) => {
     ])
     .then(() => {
         // Continue with the rest of the code after the isolation level has been set
-        console.log('Transaction isolation level set to SERIALIZABLE for all pools');
+        //console.log('Transaction isolation level set to SERIALIZABLE for all pools');
         return Promise.all([
             // First query to central pool
             new Promise((resolve, reject) => {
@@ -300,6 +302,14 @@ app.post('/readAge', (req, res) => {
 });
 
 
+//----------- STEP 3 ----------------
+
+const regions = {
+    central: true,
+    luzon: true,
+    visayas_mindanao: true
+};
+
 
 // TASK 2 CASE 2 Route to handle updating a column in MySQL
 /*
@@ -313,7 +323,33 @@ app.post('/updateAge', (req, res) => {
     const query1 = `SELECT pxage FROM appointment WHERE apptid = ?`;
     const query2 = `UPDATE appointment SET pxage = ? WHERE apptid = ?`;
     let destinationPool = determinePool(hospitalRegion)
+    const island = determineIsland(hospitalRegion)
+    console.log("island: " + island)
 
+    switch (hospitalRegion) {
+        case 'Ilocos Region (Region I)':
+        case 'Cagayan Valley (Region II)':
+        case 'Central Luzon (Region III)':
+        case 'CALABARZON (Region IV-A)':
+        case 'Bicol Region (Region V)':
+        case 'National Capital Region (NCR)':
+        case 'Cordillera Administrative Region (CAR)':
+        case 'MIMAROPA Region':
+            destinationPool = luzon; break;
+        case 'Western Visayas (Region VI)':
+        case 'Central Visayas (Region VII)':
+        case 'Eastern Visayas (Region VIII)':
+        case 'Zamboanga Peninsula (Region IX)':
+        case 'Northern Mindanao (Region X)':
+        case 'Davao Region (Region XI)':
+        case 'SOCCSKSARGEN (Cotabato Region) (XII)':
+        case 'Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)':
+        case 'Caraga (Region XIII)':
+            destinationPool = vismin; break;
+        default:
+            // If no specific region is specified or unknown, default to central
+            destinationPool = central; break;
+    }
 
     // Call the global function to set the transaction isolation level
     Promise.all([
@@ -324,7 +360,7 @@ app.post('/updateAge', (req, res) => {
     ])
     .then(() => {
         // Continue with the rest of the code after the isolation level has been set
-        console.log('Transaction isolation level set to SERIALIZABLE for all pools');
+        //console.log('Transaction isolation level set to SERIALIZABLE for all pools');
         return Promise.all([
             // First query to central pool
             new Promise((resolve, reject) => {
@@ -356,27 +392,51 @@ app.post('/updateAge', (req, res) => {
             }),
             // First query to update
             new Promise((resolve, reject) => {
-                central.query(query2, [newAge, apptid], (error, results, fields) => {
-                    if (error) {
-                        console.error('Error updating column:', error);
-                        reject('Error updating column');
-                        return;
-                    }
-                    console.log('Column updated successfully');
-                    resolve();
-                });
+                if(regions.central) {
+                    central.query(query2, [newAge, apptid], (error, results, fields) => {
+                        if (error) {
+                            console.error('Error updating column:', error);
+                            reject('Error updating column');
+                            return;
+                        }
+                        console.log('Central Column updated successfully');
+                        resolve();
+                    });
+                } else {
+                    writeLogs(apptid, newAge, 'central')
+                }
             }),
             // Second query to update
             new Promise((resolve, reject) => {
-                destinationPool.query(query2, [newAge, apptid], (error, results, fields) => {
-                    if (error) {
-                        console.error('Error updating column:', error);
-                        reject('Error updating column');
-                        return;
+                if(island == 'luzon'){
+                    if(regions.luzon){
+                        destinationPool.query(query2, [newAge, apptid], (error, results, fields) => {
+                            if (error) {
+                                console.error('Error updating column:', error);
+                                reject('Error updating column');
+                                return;
+                            }
+                            console.log('Luzon Column updated successfully');
+                            resolve();
+                        });
+                    } else {
+                        writeLogs(apptid, newAge, 'luzon')
                     }
-                    console.log('Column updated successfully');
-                    resolve();
-                });
+                } else if(island == 'vismin') {
+                    if(regions.visayas_mindanao){
+                        destinationPool.query(query2, [newAge, apptid], (error, results, fields) => {
+                            if (error) {
+                                console.error('Error updating column:', error);
+                                reject('Error updating column');
+                                return;
+                            }
+                            console.log('Vismin Column updated successfully');
+                            resolve();
+                        });
+                    } else {
+                        writeLogs(apptid, newAge, 'visayas_mindanao')
+                    }
+                }
             })
         ])
     })
@@ -420,6 +480,75 @@ app.post('/getHospitalRegion', (req, res) => {
     });
 });
 
+// Create an endpoint to serve the `regions` data
+app.get('/regions', (req, res) => {
+    res.json({ regions });
+});
+
+// Define the '/toggleRegion' endpoint
+app.post('/toggleRegion', (req, res) => {
+    const { region, value } = req.body;
+
+    // Update the value of the region received from the request
+    regions[region] = value;
+
+    // Send a response indicating success
+    res.json({ message: `Region '${region}' toggled to ${value}` });
+});
+
+function writeLogs(apptid, age, node){
+    const logsFolder = 'crash logs';
+    let fileName;
+    switch(node) {
+        case 'central': fileName='central_crash_logs.txt'; break;
+        case 'luzon': fileName='luzon_crash_logs.txt'; break;
+        case 'visayas_mindanao': fileName='visayas_mindanao_crash_logs.txt'; break;
+    }
+    const filePath = path.join(__dirname, logsFolder, fileName);
+    
+    const logData = `ApptId: ${apptid}, Age:${age}\n`;
+    
+    // Check if the directory exists, if not, create it
+    if (!fs.existsSync(path.join(__dirname, logsFolder))) {
+        fs.mkdirSync(path.join(__dirname, logsFolder));
+    }
+    
+    // Write to the file
+    fs.appendFileSync(filePath, logData, 'utf8', (err) => {
+        if (err) {
+            console.error('Error writing to file:', err);
+            return;
+        }
+        console.log('Data has been written to file successfully.');
+    });
+}
+
+function determineIsland(region) {
+    switch (region) {
+        case 'Ilocos Region (Region I)':
+        case 'Cagayan Valley (Region II)':
+        case 'Central Luzon (Region III)':
+        case 'CALABARZON (Region IV-A)':
+        case 'Bicol Region (Region V)':
+        case 'National Capital Region (NCR)':
+        case 'Cordillera Administrative Region (CAR)':
+        case 'MIMAROPA Region':
+            return 'luzon'; 
+        case 'Western Visayas (Region VI)':
+        case 'Central Visayas (Region VII)':
+        case 'Eastern Visayas (Region VIII)':
+        case 'Zamboanga Peninsula (Region IX)':
+        case 'Northern Mindanao (Region X)':
+        case 'Davao Region (Region XI)':
+        case 'SOCCSKSARGEN (Cotabato Region) (XII)':
+        case 'Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)':
+        case 'Caraga (Region XIII)':
+            return 'vismin';
+        default:
+            // If no specific region is specified or unknown, default to central
+            return 'central'
+    }
+}
 
 function determinePool(data) {
     switch (data.hospitalregion) {
@@ -447,6 +576,7 @@ function determinePool(data) {
             return central
     }
 }
+
 
 
 // Start the server
