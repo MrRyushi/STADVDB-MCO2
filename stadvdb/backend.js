@@ -35,7 +35,7 @@ const vismin = createPool({
     connectionLimit: 10
 });
 
-// Function to synchronize appointment data from luzon/vismin to central
+// Function to synchronize appointment data from luzon/vismin with central
 function syncInsertAppointmentData(destinationPool, data) {
     checkAppointmentExists(destinationPool, data.apptid, (appointmentExists) => {
         if (appointmentExists) {
@@ -70,7 +70,6 @@ function syncUpdateAppointmentData(destinationPool, data) {
     });
 }
 
-
 // Function to check if an appointment ID exists
 function checkAppointmentExists(pool, apptid, callback) {
     pool.query('SELECT * FROM appointment WHERE apptid = ?', [apptid], (err, result) => {
@@ -88,13 +87,40 @@ function checkAppointmentExists(pool, apptid, callback) {
     });
 }
 
+function determinePool(hospitalregion) {
+    switch (hospitalregion) {
+        case 'Ilocos Region (Region I)':
+        case 'Cagayan Valley (Region II)':
+        case 'Central Luzon (Region III)':
+        case 'CALABARZON (Region IV-A)':
+        case 'Bicol Region (Region V)':
+        case 'National Capital Region (NCR)':
+        case 'Cordillera Administrative Region (CAR)':
+        case 'MIMAROPA Region':
+            return luzon; 
+        case 'Western Visayas (Region VI)':
+        case 'Central Visayas (Region VII)':
+        case 'Eastern Visayas (Region VIII)':
+        case 'Zamboanga Peninsula (Region IX)':
+        case 'Northern Mindanao (Region X)':
+        case 'Davao Region (Region XI)':
+        case 'SOCCSKSARGEN (Cotabato Region) (XII)':
+        case 'Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)':
+        case 'Caraga (Region XIII)':
+            return vismin;
+        default:
+            // If no specific region is specified or unknown, default to central
+            return central
+    }
+}
+
 /// Route to handle inserting data
 app.post('/insertAppt', async (req, res) => {
     const data = req.body;
     console.log(data);
 
     let sourcePool = central;
-    let destinationPool = determinePool(data)
+    let destinationPool = determinePool(data.hospitalRegion)
 
     // Check if the appointment ID already exists
     checkAppointmentExists(sourcePool, data.apptid, (appointmentExists) => {
@@ -121,7 +147,6 @@ app.post('/insertAppt', async (req, res) => {
 });
     
     
-
 // Route to handle searching data
 app.post('/searchAppt', (req, res) => {
     const data = req.body;
@@ -158,7 +183,7 @@ app.put('/updateAppt', async (req, res) => {
         }
     }
     let sourcePool = central;
-    let destinationPool = determinePool(data)
+    let destinationPool = determinePool(data.hospitalRegion)
 
     // Check if the appointment ID already exists
     checkAppointmentExists(sourcePool, data.apptid, (appointmentExists) => {
@@ -184,24 +209,6 @@ app.put('/updateAppt', async (req, res) => {
     });
 });
 
-/*
-// Route to handle updating appointment information after verifying appointment ID exists
-app.put('/updateAppt', (req, res) => {
-    const updatedData = req.body;
-    const apptid = updatedData.apptid;
-    central.query(`UPDATE appointment SET apptdate = ?, pxid = ?, pxage = ?, pxgender = ?, doctorid = ?, hospitalname = ?, hospitalcity = ?, hospitalprovince = ?, hospitalregion = ? WHERE apptid = ?`,
-    [updatedData.apptdate, updatedData.pxid, updatedData.pxage, updatedData.pxgender, updatedData.doctorid, updatedData.hospitalname, updatedData.hospitalcity, updatedData.hospitalprovince, updatedData.hospitalregion, apptid],
-    (err, result) => {
-        if (err) {
-            console.error('Error updating appointment:', err);
-            res.status(500).json({ error: 'Error updating appointment' });
-        } else {
-            console.log('Updated appointment:', result);
-            res.json({ message: 'Appointment updated successfully' });
-        }
-    });
-});
-*/
 
 
 // Route to fetch data from MySQL and send to frontend
@@ -219,40 +226,72 @@ app.get('/getApptIds', (req, res) => {
     });
   });
 
-  // Route to handle updating a column in MySQL
-  app.post('/updateAge', (req, res) => {
+
+// TASK 2 CASE 1
+// Route to handle reading the same data item
+app.post('/readAge', (req, res) => {
+    const apptid = req.body.apptid;
+    const hospitalRegion = req.body.hospitalRegion;
+    const query = `SELECT pxage FROM appointment WHERE apptid = ?`;
+    let destinationPool = determinePool(hospitalRegion);
+    
+    // Use Promise.all to execute both queries concurrently
+    Promise.all([
+        // First query to central pool
+        new Promise((resolve, reject) => {
+            central.query(query, [apptid], (error, results, fields) => {
+                if (error) {
+                    console.error('Error reading patient age from central pool:', error);
+                    reject(error);
+                    return;
+                }
+                // Resolve with the patient's age if found, otherwise null
+                const centralAge = results.length > 0 ? results[0].pxage : null;
+                resolve(centralAge);
+            });
+        }),
+        // Second query to destination pool
+        new Promise((resolve, reject) => {
+            destinationPool.query(query, [apptid], (error, results, fields) => {
+                if (error) {
+                    console.error('Error reading patient age from destination pool:', error);
+                    reject(error);
+                    return;
+                }
+                // Resolve with the patient's age if found, otherwise null
+                const destinationAge = results.length > 0 ? results[0].pxage : null;
+                resolve(destinationAge)
+            });
+        })
+    ])
+    .then(([centralAge, destinationAge]) => {
+        // Send response with patient age from both pools
+        res.json({
+            centralAge: centralAge,
+            destinationAge: destinationAge,
+            message: 'Patient age read successfully'
+        });
+    })
+    .catch(error => {
+        // Handle errors
+        console.error('Error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    });
+});
+
+
+
+// TASK 2 CASE 2 Route to handle updating a column in MySQL
+/*
+At least one transaction in the 3 nodes is writing (update / delete) and the
+other concurrent transactions are reading the same data item.
+*/
+app.post('/updateAge', (req, res) => {
     const id = req.body.id;
     const newAge = req.body.newAge;
     const hospitalRegion = req.body.hospitalRegion;
     const query = `UPDATE appointment SET pxage = ? WHERE apptid = ?`;
-    let destinationPool;
-
-    switch (hospitalRegion) {
-        case 'Ilocos Region (Region I)':
-        case 'Cagayan Valley (Region II)':
-        case 'Central Luzon (Region III)':
-        case 'CALABARZON (Region IV-A)':
-        case 'Bicol Region (Region V)':
-        case 'National Capital Region (NCR)':
-        case 'Cordillera Administrative Region (CAR)':
-        case 'MIMAROPA Region':
-            destinationPool = luzon; break;
-        case 'Western Visayas (Region VI)':
-        case 'Central Visayas (Region VII)':
-        case 'Eastern Visayas (Region VIII)':
-        case 'Zamboanga Peninsula (Region IX)':
-        case 'Northern Mindanao (Region X)':
-        case 'Davao Region (Region XI)':
-        case 'SOCCSKSARGEN (Cotabato Region) (XII)':
-        case 'Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)':
-        case 'Caraga (Region XIII)':
-            destinationPool = vismin; break;
-        default:
-            // If no specific region is specified or unknown, default to central
-            destinationPool = central
-            break;
-    }
-    
+    let destinationPool = determinePool(hospitalRegion)
 
     // Use Promise.all to wait for both queries to complete
     Promise.all([
@@ -323,32 +362,7 @@ app.post('/getHospitalRegion', (req, res) => {
 });
 
 
-function determinePool(data) {
-    switch (data.hospitalregion) {
-        case 'Ilocos Region (Region I)':
-        case 'Cagayan Valley (Region II)':
-        case 'Central Luzon (Region III)':
-        case 'CALABARZON (Region IV-A)':
-        case 'Bicol Region (Region V)':
-        case 'National Capital Region (NCR)':
-        case 'Cordillera Administrative Region (CAR)':
-        case 'MIMAROPA Region':
-            return luzon; 
-        case 'Western Visayas (Region VI)':
-        case 'Central Visayas (Region VII)':
-        case 'Eastern Visayas (Region VIII)':
-        case 'Zamboanga Peninsula (Region IX)':
-        case 'Northern Mindanao (Region X)':
-        case 'Davao Region (Region XI)':
-        case 'SOCCSKSARGEN (Cotabato Region) (XII)':
-        case 'Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)':
-        case 'Caraga (Region XIII)':
-            return vismin;
-        default:
-            // If no specific region is specified or unknown, default to central
-            return central
-    }
-}
+
 
 
 // Start the server
