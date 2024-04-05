@@ -85,8 +85,6 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 
-
-
     // Text-based reports functions
     // Function to generate the total count of appointments report
     totalCountAppointments.addEventListener('click', generateTotalCountAppointmentsReport);
@@ -184,15 +182,17 @@ document.addEventListener("DOMContentLoaded", function() {
             });
     }
 
+    populateDropdown('dropdown1')
+    populateDropdown('dropdown2')
     // Function to populate dropdown
-    function populateDropdown() {
+    function populateDropdown(dropdownID) {
         fetchData('http://localhost:3000/getApptIds')
             .then(data => {
                 // Process the data received from the backend
                 console.log('Data received:', data);
                 // Call functions or update UI with the data
 
-                var dropdown = document.getElementById('dropdown');
+                var dropdown = document.getElementById(dropdownID);
                 dropdown.innerHTML = ''; // Clear existing options
 
                 // Iterate through the first 10 elements in the data array
@@ -213,12 +213,6 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
 
-<<<<<<< Updated upstream
-    // Attach event listener to the dropdown select element
-    document.getElementById('dropdown').addEventListener('focus', function() {
-        // Call the populateDropdown function when the select is focused
-        populateDropdown();
-=======
     function displayReadAgeResults(data) {
         console.log(data);
         const divToDisplay = document.getElementById('readAgeResults');
@@ -246,7 +240,6 @@ document.addEventListener("DOMContentLoaded", function() {
     document.getElementById('readPatientAge').addEventListener('click', function() {
         let apptIdToRead = document.getElementById('dropdown1').value;
         console.log(apptIdToRead);
-        let div = 'read';
     
          // Fetch hospital region by appointment ID
          fetch('http://localhost:3000/getHospitalRegion', {
@@ -298,17 +291,12 @@ document.addEventListener("DOMContentLoaded", function() {
             console.error('Error:', error);
             // Optionally, display an error message to the user
         });
->>>>>>> Stashed changes
     });
     
       
     document.getElementById('updatePatientAge').addEventListener('click', function() {
-<<<<<<< Updated upstream
-        let apptIdToUpdate = document.getElementById('dropdown').value;
-=======
         let apptIdToUpdate = document.getElementById('dropdown2').value;
         console.log(apptIdToUpdate);
->>>>>>> Stashed changes
         let ageToUpdate = document.getElementById('updateAge').value;
     
         // Fetch hospital region by appointment ID
@@ -355,10 +343,6 @@ document.addEventListener("DOMContentLoaded", function() {
             // Handle success response from the backend
             console.log('Success:', data);
             // Optionally, update the UI or display a success message
-<<<<<<< Updated upstream
-=======
-            displayUpdatedReadAgeResults(data)
->>>>>>> Stashed changes
         })
         .catch(error => {
             // Handle error from the backend or network error
@@ -366,10 +350,5 @@ document.addEventListener("DOMContentLoaded", function() {
             // Optionally, display an error message to the user
         });
     });
-<<<<<<< Updated upstream
-
-=======
-    
->>>>>>> Stashed changes
     
 });

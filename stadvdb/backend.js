@@ -219,42 +219,6 @@ app.get('/getApptIds', (req, res) => {
     });
   });
 
-<<<<<<< Updated upstream
-  // Route to handle updating a column in MySQL
-  app.post('/updateAge', (req, res) => {
-    const id = req.body.id;
-    const newAge = req.body.newAge;
-    const hospitalRegion = req.body.hospitalRegion;
-    const query = `UPDATE appointment SET pxage = ? WHERE apptid = ?`;
-    let destinationPool;
-
-    switch (hospitalRegion) {
-        case 'Ilocos Region (Region I)':
-        case 'Cagayan Valley (Region II)':
-        case 'Central Luzon (Region III)':
-        case 'CALABARZON (Region IV-A)':
-        case 'Bicol Region (Region V)':
-        case 'National Capital Region (NCR)':
-        case 'Cordillera Administrative Region (CAR)':
-        case 'MIMAROPA Region':
-            destinationPool = luzon; break;
-        case 'Western Visayas (Region VI)':
-        case 'Central Visayas (Region VII)':
-        case 'Eastern Visayas (Region VIII)':
-        case 'Zamboanga Peninsula (Region IX)':
-        case 'Northern Mindanao (Region X)':
-        case 'Davao Region (Region XI)':
-        case 'SOCCSKSARGEN (Cotabato Region) (XII)':
-        case 'Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)':
-        case 'Caraga (Region XIII)':
-            destinationPool = vismin; break;
-        default:
-            // If no specific region is specified or unknown, default to central
-            destinationPool = central
-            break;
-    }
-    
-=======
 
 // TASK 2 CASE 1
 // Route to handle reading the same data item
@@ -323,7 +287,6 @@ app.post('/updateAge', (req, res) => {
     const query1 = `SELECT pxage FROM appointment WHERE apptid = ?`;
     const query2 = `UPDATE appointment SET pxage = ? WHERE apptid = ?`;
     let destinationPool = determinePool(hospitalRegion)
->>>>>>> Stashed changes
 
     // Use Promise.all to wait for both queries to complete
     Promise.all([
