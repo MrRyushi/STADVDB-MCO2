@@ -219,6 +219,22 @@ app.get('/getApptIds', (req, res) => {
     });
   });
 
+ //Function for ISOLATION LEVEL SERIALIZABLE
+ global.setSerializable = function(pool) {
+     console.log('setSerializable called');
+     return new Promise((resolve, reject) => {
+         pool.query('SET TRANSACTION ISOLATION LEVEL SERIALIZABLE', (error, results, fields) => {
+             console.log('pool.query callback called');
+             if (error) {
+                 console.error('Error setting transaction isolation level:', error);
+                 reject(error);
+             } else {
+                 console.log('Transaction isolation level set to SERIALIZABLE');
+                 resolve();
+             }
+         });
+     });
+ };
 
 // TASK 2 CASE 1
 // Route to handle reading the same data item
@@ -227,37 +243,47 @@ app.post('/readAge', (req, res) => {
     const hospitalRegion = req.body.hospitalRegion;
     const query = `SELECT pxage FROM appointment WHERE apptid = ?`;
     let destinationPool = determinePool(hospitalRegion);
-    
-    // Use Promise.all to execute both queries concurrently
+
+    // Call the global function to set the transaction isolation level
     Promise.all([
-        // First query to central pool
-        new Promise((resolve, reject) => {
-            central.query(query, [apptid], (error, results, fields) => {
-                if (error) {
-                    console.error('Error reading patient age from central pool:', error);
-                    reject(error);
-                    return;
-                }
-                // Resolve with the patient's age if found, otherwise null
-                const centralAge = results.length > 0 ? results[0].pxage : null;
-                resolve(centralAge);
-                console.log(centralAge)
-            });
-        }),
-        // Second query to destination pool
-        new Promise((resolve, reject) => {
-            destinationPool.query(query, [apptid], (error, results, fields) => {
-                if (error) {
-                    console.error('Error reading patient age from destination pool:', error);
-                    reject(error);
-                    return;
-                }
-                // Resolve with the patient's age if found, otherwise null
-                const destinationAge = results.length > 0 ? results[0].pxage : null;
-                resolve(destinationAge)
-            });
-        })
+        global.setSerializable(central),
+        global.setSerializable(luzon),
+        global.setSerializable(vismin),
+        global.setSerializable(destinationPool)
     ])
+    .then(() => {
+        // Continue with the rest of the code after the isolation level has been set
+        console.log('Transaction isolation level set to SERIALIZABLE for all pools');
+        return Promise.all([
+            // First query to central pool
+            new Promise((resolve, reject) => {
+                central.query(query, [apptid], (error, results, fields) => {
+                    if (error) {
+                        console.error('Error reading patient age from central pool:', error);
+                        reject(error);
+                        return;
+                    }
+                    // Resolve with the patient's age if found, otherwise null
+                    const centralAge = results.length > 0 ? results[0].pxage : null;
+                    resolve(centralAge);
+                    console.log(centralAge)
+                });
+            }),
+            // Second query to destination pool
+            new Promise((resolve, reject) => {
+                destinationPool.query(query, [apptid], (error, results, fields) => {
+                    if (error) {
+                        console.error('Error reading patient age from destination pool:', error);
+                        reject(error);
+                        return;
+                    }
+                    // Resolve with the patient's age if found, otherwise null
+                    const destinationAge = results.length > 0 ? results[0].pxage : null;
+                    resolve(destinationAge)
+                });
+            })
+        ])
+    })
     .then(([centralAge, destinationAge]) => {
         // Send response with patient age from both pools
         res.json({
@@ -288,64 +314,75 @@ app.post('/updateAge', (req, res) => {
     const query2 = `UPDATE appointment SET pxage = ? WHERE apptid = ?`;
     let destinationPool = determinePool(hospitalRegion)
 
-    // Use Promise.all to wait for both queries to complete
+
+    // Call the global function to set the transaction isolation level
     Promise.all([
-        // First query to central pool
-        new Promise((resolve, reject) => {
-            central.query(query1, [apptid], (error, results, fields) => {
-                if (error) {
-                    console.error('Error reading patient age from central pool:', error);
-                    reject(error);
-                    return;
-                }
-                // Resolve with the patient's age if found, otherwise null
-                const centralAge = results.length > 0 ? results[0].pxage : null;
-                resolve(centralAge);
-                console.log("Old Age (central): " + centralAge)
-            });
-        }),
-        // Second query to destination pool
-        new Promise((resolve, reject) => {
-            destinationPool.query(query1, [apptid], (error, results, fields) => {
-                if (error) {
-                    console.error('Error reading patient age from destination pool:', error);
-                    reject(error);
-                    return;
-                }
-                // Resolve with the patient's age if found, otherwise null
-                const destinationAge = results.length > 0 ? results[0].pxage : null;
-                resolve(destinationAge)
-                console.log("Old Age (destination pool): " +  destinationAge)
-            });
-        }),
-        // First query to update
-        new Promise((resolve, reject) => {
-            central.query(query2, [newAge, apptid], (error, results, fields) => {
-                if (error) {
-                    console.error('Error updating column:', error);
-                    reject('Error updating column');
-                    return;
-                }
-                console.log('Column updated successfully');
-                resolve();
-            });
-        }),
-        // Second query to update
-        new Promise((resolve, reject) => {
-            destinationPool.query(query2, [newAge, apptid], (error, results, fields) => {
-                if (error) {
-                    console.error('Error updating column:', error);
-                    reject('Error updating column');
-                    return;
-                }
-                console.log('Column updated successfully');
-                resolve();
-            });
-        })
+        global.setSerializable(central),
+        global.setSerializable(luzon),
+        global.setSerializable(vismin),
+        global.setSerializable(destinationPool)
     ])
     .then(() => {
+        // Continue with the rest of the code after the isolation level has been set
+        console.log('Transaction isolation level set to SERIALIZABLE for all pools');
+        return Promise.all([
+            // First query to central pool
+            new Promise((resolve, reject) => {
+                central.query(query1, [apptid], (error, results, fields) => {
+                    if (error) {
+                        console.error('Error reading patient age from central pool:', error);
+                        reject(error);
+                        return;
+                    }
+                    // Resolve with the patient's age if found, otherwise null
+                    const centralAge = results.length > 0 ? results[0].pxage : null;
+                    resolve(centralAge);
+                    console.log("Old Age (central): " + centralAge)
+                });
+            }),
+            // Second query to destination pool
+            new Promise((resolve, reject) => {
+                destinationPool.query(query1, [apptid], (error, results, fields) => {
+                    if (error) {
+                        console.error('Error reading patient age from destination pool:', error);
+                        reject(error);
+                        return;
+                    }
+                    // Resolve with the patient's age if found, otherwise null
+                    const destinationAge = results.length > 0 ? results[0].pxage : null;
+                    resolve(destinationAge)
+                    console.log("Old Age (destination pool): " +  destinationAge)
+                });
+            }),
+            // First query to update
+            new Promise((resolve, reject) => {
+                central.query(query2, [newAge, apptid], (error, results, fields) => {
+                    if (error) {
+                        console.error('Error updating column:', error);
+                        reject('Error updating column');
+                        return;
+                    }
+                    console.log('Column updated successfully');
+                    resolve();
+                });
+            }),
+            // Second query to update
+            new Promise((resolve, reject) => {
+                destinationPool.query(query2, [newAge, apptid], (error, results, fields) => {
+                    if (error) {
+                        console.error('Error updating column:', error);
+                        reject('Error updating column');
+                        return;
+                    }
+                    console.log('Column updated successfully');
+                    resolve();
+                });
+            })
+        ])
+    })
+    .then(() => {
         // Send response after both queries have completed
-        res.json({ message: 'Column updated successfully' });
+        res.json({ message: 'Column updated successfully AAAAAAAAAaaa' });
     })
     .catch(error => {
         // Handle errors
