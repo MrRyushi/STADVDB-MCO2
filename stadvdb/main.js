@@ -213,14 +213,102 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
 
+<<<<<<< Updated upstream
     // Attach event listener to the dropdown select element
     document.getElementById('dropdown').addEventListener('focus', function() {
         // Call the populateDropdown function when the select is focused
         populateDropdown();
+=======
+    function displayReadAgeResults(data) {
+        console.log(data);
+        const divToDisplay = document.getElementById('readAgeResults');
+    
+        divToDisplay.innerHTML = ''; // Clear previous read age results
+        
+        // Check if data is not empty and contains age information
+        if (data.centralAge && data.destinationAge) {
+            // Create paragraph elements to hold the age results
+            const centralAgeParagraph = document.createElement('p');
+            centralAgeParagraph.textContent = `Patient Age from Central Pool: ${data.centralAge}`;
+            
+            const destinationAgeParagraph = document.createElement('p');
+            destinationAgeParagraph.textContent = `Patient Age from Destination Pool: ${data.destinationAge}`;
+        
+            // Append the paragraphs to the read age results div
+            divToDisplay.appendChild(centralAgeParagraph);
+            divToDisplay.appendChild(destinationAgeParagraph);
+        } else {
+            // If no data found or missing age information, display a message
+            divToDisplay.textContent = 'No valid age information found.';
+        }
+    }
+    
+    document.getElementById('readPatientAge').addEventListener('click', function() {
+        let apptIdToRead = document.getElementById('dropdown1').value;
+        console.log(apptIdToRead);
+        let div = 'read';
+    
+         // Fetch hospital region by appointment ID
+         fetch('http://localhost:3000/getHospitalRegion', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ apptid: apptIdToRead })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Extract hospital region from response data
+            const hospitalRegion = data.hospitalRegion;
+    
+            // Create an object with the data to send to the backend for reading age
+            const readData = {
+                apptid: apptIdToRead,
+                hospitalRegion: hospitalRegion // Pass hospital region to the backend
+            };
+    
+            // Send a POST request to read age with hospital region included
+            return fetch('http://localhost:3000/readAge', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(readData)
+            });
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Handle success response from the backend
+            console.log('Success:', data);
+            // Optionally, update the UI or display a success message
+            displayReadAgeResults(data)
+        })
+        .catch(error => {
+            // Handle error from the backend or network error
+            console.error('Error:', error);
+            // Optionally, display an error message to the user
+        });
+>>>>>>> Stashed changes
     });
     
+      
     document.getElementById('updatePatientAge').addEventListener('click', function() {
+<<<<<<< Updated upstream
         let apptIdToUpdate = document.getElementById('dropdown').value;
+=======
+        let apptIdToUpdate = document.getElementById('dropdown2').value;
+        console.log(apptIdToUpdate);
+>>>>>>> Stashed changes
         let ageToUpdate = document.getElementById('updateAge').value;
     
         // Fetch hospital region by appointment ID
@@ -243,7 +331,7 @@ document.addEventListener("DOMContentLoaded", function() {
     
             // Create an object with the data to send to the backend for updating age
             const updateData = {
-                id: apptIdToUpdate,
+                apptid: apptIdToUpdate,
                 newAge: ageToUpdate,
                 hospitalRegion: hospitalRegion // Pass hospital region to the backend
             };
@@ -267,6 +355,10 @@ document.addEventListener("DOMContentLoaded", function() {
             // Handle success response from the backend
             console.log('Success:', data);
             // Optionally, update the UI or display a success message
+<<<<<<< Updated upstream
+=======
+            displayUpdatedReadAgeResults(data)
+>>>>>>> Stashed changes
         })
         .catch(error => {
             // Handle error from the backend or network error
@@ -274,6 +366,10 @@ document.addEventListener("DOMContentLoaded", function() {
             // Optionally, display an error message to the user
         });
     });
+<<<<<<< Updated upstream
 
+=======
+    
+>>>>>>> Stashed changes
     
 });

@@ -219,6 +219,7 @@ app.get('/getApptIds', (req, res) => {
     });
   });
 
+<<<<<<< Updated upstream
   // Route to handle updating a column in MySQL
   app.post('/updateAge', (req, res) => {
     const id = req.body.id;
@@ -253,12 +254,110 @@ app.get('/getApptIds', (req, res) => {
             break;
     }
     
+=======
+
+// TASK 2 CASE 1
+// Route to handle reading the same data item
+app.post('/readAge', (req, res) => {
+    const apptid = req.body.apptid;
+    const hospitalRegion = req.body.hospitalRegion;
+    const query = `SELECT pxage FROM appointment WHERE apptid = ?`;
+    let destinationPool = determinePool(hospitalRegion);
+    
+    // Use Promise.all to execute both queries concurrently
+    Promise.all([
+        // First query to central pool
+        new Promise((resolve, reject) => {
+            central.query(query, [apptid], (error, results, fields) => {
+                if (error) {
+                    console.error('Error reading patient age from central pool:', error);
+                    reject(error);
+                    return;
+                }
+                // Resolve with the patient's age if found, otherwise null
+                const centralAge = results.length > 0 ? results[0].pxage : null;
+                resolve(centralAge);
+                console.log(centralAge)
+            });
+        }),
+        // Second query to destination pool
+        new Promise((resolve, reject) => {
+            destinationPool.query(query, [apptid], (error, results, fields) => {
+                if (error) {
+                    console.error('Error reading patient age from destination pool:', error);
+                    reject(error);
+                    return;
+                }
+                // Resolve with the patient's age if found, otherwise null
+                const destinationAge = results.length > 0 ? results[0].pxage : null;
+                resolve(destinationAge)
+            });
+        })
+    ])
+    .then(([centralAge, destinationAge]) => {
+        // Send response with patient age from both pools
+        res.json({
+            centralAge: centralAge,
+            destinationAge: destinationAge,
+            message: 'Patient age read successfully'
+        });
+    })
+    .catch(error => {
+        // Handle errors
+        console.error('Error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    });
+});
+
+
+
+// TASK 2 CASE 2 Route to handle updating a column in MySQL
+/*
+At least one transaction in the 3 nodes is writing (update / delete) and the
+other concurrent transactions are reading the same data item.
+*/
+app.post('/updateAge', (req, res) => {
+    const apptid = req.body.apptid;
+    const newAge = req.body.newAge;
+    const hospitalRegion = req.body.hospitalRegion;
+    const query1 = `SELECT pxage FROM appointment WHERE apptid = ?`;
+    const query2 = `UPDATE appointment SET pxage = ? WHERE apptid = ?`;
+    let destinationPool = determinePool(hospitalRegion)
+>>>>>>> Stashed changes
 
     // Use Promise.all to wait for both queries to complete
     Promise.all([
-        // First query
+        // First query to central pool
         new Promise((resolve, reject) => {
-            central.query(query, [newAge, id], (error, results, fields) => {
+            central.query(query1, [apptid], (error, results, fields) => {
+                if (error) {
+                    console.error('Error reading patient age from central pool:', error);
+                    reject(error);
+                    return;
+                }
+                // Resolve with the patient's age if found, otherwise null
+                const centralAge = results.length > 0 ? results[0].pxage : null;
+                resolve(centralAge);
+                console.log("Old Age (central): " + centralAge)
+            });
+        }),
+        // Second query to destination pool
+        new Promise((resolve, reject) => {
+            destinationPool.query(query1, [apptid], (error, results, fields) => {
+                if (error) {
+                    console.error('Error reading patient age from destination pool:', error);
+                    reject(error);
+                    return;
+                }
+                // Resolve with the patient's age if found, otherwise null
+                const destinationAge = results.length > 0 ? results[0].pxage : null;
+                resolve(destinationAge)
+                console.log("Old Age (destination pool): " +  destinationAge)
+            });
+        }),
+        // First query to update
+        new Promise((resolve, reject) => {
+            central.query(query2, [newAge, apptid], (error, results, fields) => {
                 if (error) {
                     console.error('Error updating column:', error);
                     reject('Error updating column');
@@ -268,9 +367,9 @@ app.get('/getApptIds', (req, res) => {
                 resolve();
             });
         }),
-        // Second query
+        // Second query to update
         new Promise((resolve, reject) => {
-            destinationPool.query(query, [newAge, id], (error, results, fields) => {
+            destinationPool.query(query2, [newAge, apptid], (error, results, fields) => {
                 if (error) {
                     console.error('Error updating column:', error);
                     reject('Error updating column');
@@ -291,7 +390,6 @@ app.get('/getApptIds', (req, res) => {
         res.status(500).json({ error: error });
     });
 });
-
 
 // Route to get hospital region by appointment ID
 app.post('/getHospitalRegion', (req, res) => {
