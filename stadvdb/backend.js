@@ -305,53 +305,22 @@ app.post('/updateAge', (req, res) => {
     const hospitalRegion = req.body.hospitalRegion;
     const query1 = `SELECT pxage FROM appointment WHERE apptid = ?`;
     const query2 = `UPDATE appointment SET pxage = ? WHERE apptid = ?`;
-    let destinationPool = determinePool(hospitalRegion)
-    const island = determineIsland(hospitalRegion)
-    console.log("island: " + island)
-
+    let destinationPool = determinePool(hospitalRegion);
+    const island = determineIsland(hospitalRegion);
+    console.log("island: " + island);
 
     // Call the global function to set the transaction isolation level
     Promise.all([
         global.setSerializable(central),
         global.setSerializable(luzon),
         global.setSerializable(vismin),
-        global.setSerializable(destinationPool)
     ])
     .then(() => {
-        // Continue with the rest of the code after the isolation level has been set
-        //console.log('Transaction isolation level set to SERIALIZABLE for all pools');
+        // Execute update queries first
         return Promise.all([
-            // First query to central pool
-            new Promise((resolve, reject) => {
-                central.query(query1, [apptid], (error, results, fields) => {
-                    if (error) {
-                        console.error('Error reading patient age from central pool:', error);
-                        reject(error);
-                        return;
-                    }
-                    // Resolve with the patient's age if found, otherwise null
-                    const centralAge = results.length > 0 ? results[0].pxage : null;
-                    resolve(centralAge);
-                    console.log("Old Age (central): " + centralAge)
-                });
-            }),
-            // Second query to destination pool
-            new Promise((resolve, reject) => {
-                destinationPool.query(query1, [apptid], (error, results, fields) => {
-                    if (error) {
-                        console.error('Error reading patient age from destination pool:', error);
-                        reject(error);
-                        return;
-                    }
-                    // Resolve with the patient's age if found, otherwise null
-                    const destinationAge = results.length > 0 ? results[0].pxage : null;
-                    resolve(destinationAge)
-                    console.log("Old Age (destination pool): " +  destinationAge)
-                });
-            }),
             // First query to update
             new Promise((resolve, reject) => {
-                if(regions.central) {
+                if (regions.central) {
                     central.query(query2, [newAge, apptid], (error, results, fields) => {
                         if (error) {
                             console.error('Error updating column:', error);
@@ -362,13 +331,14 @@ app.post('/updateAge', (req, res) => {
                         resolve();
                     });
                 } else {
-                    writeLogs(apptid, newAge, 'central')
+                    writeLogs(apptid, newAge, 'central');
+                    resolve(); // Resolve even if no update was performed
                 }
             }),
             // Second query to update
             new Promise((resolve, reject) => {
-                if(island == 'luzon'){
-                    if(regions.luzon){
+                if (island == 'luzon') {
+                    if (regions.luzon) {
                         destinationPool.query(query2, [newAge, apptid], (error, results, fields) => {
                             if (error) {
                                 console.error('Error updating column:', error);
@@ -379,10 +349,11 @@ app.post('/updateAge', (req, res) => {
                             resolve();
                         });
                     } else {
-                        writeLogs(apptid, newAge, 'luzon')
+                        writeLogs(apptid, newAge, 'luzon');
+                        resolve(); // Resolve even if no update was performed
                     }
-                } else if(island == 'vismin') {
-                    if(regions.visayas_mindanao){
+                } else if (island == 'vismin') {
+                    if (regions.visayas_mindanao) {
                         destinationPool.query(query2, [newAge, apptid], (error, results, fields) => {
                             if (error) {
                                 console.error('Error updating column:', error);
@@ -393,11 +364,45 @@ app.post('/updateAge', (req, res) => {
                             resolve();
                         });
                     } else {
-                        writeLogs(apptid, newAge, 'visayas_mindanao')
+                        writeLogs(apptid, newAge, 'visayas_mindanao');
+                        resolve(); // Resolve even if no update was performed
                     }
+                } else {
+                    resolve(); // Resolve if island is not luzon or vismin
                 }
             })
-        ])
+        ]);
+    })
+    .then(() => {
+        // After updates, perform read queries
+        return Promise.all([
+            // First query to read central pool
+            new Promise((resolve, reject) => {
+                central.query(query1, [apptid], (error, results, fields) => {
+                    if (error) {
+                        console.error('Error reading patient age from central pool:', error);
+                        reject(error);
+                        return;
+                    }
+                    const centralAge = results.length > 0 ? results[0].pxage : null;
+                    console.log("Old Age (central): " + centralAge);
+                    resolve(centralAge);
+                });
+            }),
+            // Second query to read destination pool
+            new Promise((resolve, reject) => {
+                destinationPool.query(query1, [apptid], (error, results, fields) => {
+                    if (error) {
+                        console.error('Error reading patient age from destination pool:', error);
+                        reject(error);
+                        return;
+                    }
+                    const destinationAge = results.length > 0 ? results[0].pxage : null;
+                    console.log("Old Age (destination pool): " + destinationAge);
+                    resolve(destinationAge);
+                });
+            })
+        ]);
     })
     .then(([centralAge, destinationAge]) => {
         // Send response with patient age from both pools
@@ -407,11 +412,6 @@ app.post('/updateAge', (req, res) => {
             message: 'Patient age read successfully'
         });
     })
-    // .then(() => {
-    //     // Send response after both queries have completed
-    //     res.json({ message: 'Column updated successfully AAAAAAAAAaaa' });
-        
-    // })
     .catch(error => {
         // Handle errors
         console.error('Error:', error);
