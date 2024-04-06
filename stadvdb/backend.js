@@ -4,6 +4,7 @@ const cors = require('cors');
 const { createPool, pool } = require('mysql2');
 const fs = require('fs');
 const path = require('path');
+const { log } = require('console');
 
 const app = express();
 app.use(express.json());
@@ -228,13 +229,13 @@ app.post('/readAge', (req, res) => {
     const hospitalRegion = req.body.hospitalRegion;
     const query = `SELECT pxage FROM appointment WHERE apptid = ?`;
     let destinationPool = determinePool(hospitalRegion);
+    let island = determineIsland(hospitalRegion);
 
     // Call the global function to set the transaction isolation level
     Promise.all([
         global.setSerializable(central),
         global.setSerializable(luzon),
         global.setSerializable(vismin),
-        global.setSerializable(destinationPool)
     ])
     .then(() => {
         // Continue with the rest of the code after the isolation level has been set
@@ -243,6 +244,7 @@ app.post('/readAge', (req, res) => {
             // First query to central pool
             new Promise((resolve, reject) => {
                 central.query(query, [apptid], (error, results, fields) => {
+                if (regions.central) {
                     if (error) {
                         console.error('Error reading patient age from central pool:', error);
                         reject(error);
@@ -252,20 +254,50 @@ app.post('/readAge', (req, res) => {
                     const centralAge = results.length > 0 ? results[0].pxage : null;
                     resolve(centralAge);
                     console.log(centralAge)
+                }
+                else {
+                    console.log("Attempted to read on offline Central Node")
+                    resolve(); // Resolve even if no update was performed
+                }
+  
                 });
             }),
             // Second query to destination pool
             new Promise((resolve, reject) => {
-                destinationPool.query(query, [apptid], (error, results, fields) => {
-                    if (error) {
-                        console.error('Error reading patient age from destination pool:', error);
-                        reject(error);
-                        return;
+                if (island == 'luzon') {
+                    if (regions.luzon) {
+                        destinationPool.query(query, [apptid], (error, results, fields) => {
+                            if (error) {
+                                console.error('Error reading patient age from destination pool:', error);
+                                reject(error);
+                                return;
+                            }
+                            // Resolve with the patient's age if found, otherwise null
+                            const destinationAge = results.length > 0 ? results[0].pxage : null;
+                            resolve(destinationAge);
+                        });
+                    } else {
+                        console.log("Attempted to read on offline Luzon Node")
+                        resolve(); // Resolve even if no update was performed
                     }
-                    // Resolve with the patient's age if found, otherwise null
-                    const destinationAge = results.length > 0 ? results[0].pxage : null;
-                    resolve(destinationAge)
-                });
+                } else if (island == 'vismin') {
+                    if (regions.visayas_mindanao) {
+                        destinationPool.query(query, [apptid], (error, results, fields) => {
+                            if (error) {
+                                console.error('Error reading patient age from destination pool:', error);
+                                reject(error);
+                                return;
+                            }
+                            // Resolve with the patient's age if found, otherwise null
+                            const destinationAge = results.length > 0 ? results[0].pxage : null;
+                            resolve(destinationAge);
+                        });
+                    } else {
+                        console.log("Attempted to read on offline Vismin Node")
+                        resolve(); // Resolve even if no update was performed
+                    }
+                }
+                
             })
         ])
     })
@@ -385,7 +417,7 @@ app.post('/updateAge', (req, res) => {
                         return;
                     }
                     const centralAge = results.length > 0 ? results[0].pxage : null;
-                    console.log("Old Age (central): " + centralAge);
+                    console.log("New Age (central): " + centralAge);
                     resolve(centralAge);
                 });
             }),
@@ -398,7 +430,7 @@ app.post('/updateAge', (req, res) => {
                         return;
                     }
                     const destinationAge = results.length > 0 ? results[0].pxage : null;
-                    console.log("Old Age (destination pool): " + destinationAge);
+                    console.log("New Age (destination pool): " + destinationAge);
                     resolve(destinationAge);
                 });
             })
@@ -510,17 +542,6 @@ app.get('/regions', (req, res) => {
     res.json({ regions });
 });
 
-// // Define the '/toggleRegion' endpoint
-// app.post('/toggleRegion', (req, res) => {
-//     const { region, value } = req.body;
-
-//     // Update the value of the region received from the request
-//     regions[region] = value;
-
-//     // Send a response indicating success
-//     res.json({ message: `Region '${region}' toggled to ${value}` });
-// });
-
 function writeLogs(apptid, age, node){
     const logsFolder = 'crash logs';
     let fileName;
@@ -551,15 +572,17 @@ function writeLogs(apptid, age, node){
 // Route to toggle region status and handle crash logs if region is toggled back on
 app.post('/toggleRegion', (req, res) => {
     const { region, value } = req.body;
+    console.log(region)
 
     // Update the value of the region received from the request
     regions[region] = value;
 
     // If the region is being toggled back on, read crash logs and update the database
     if (value) {
-        const logs = readLogs(region); // Read crash logs for the specified region
+        let node = region;
+        let logs = readLogs(node); // Read crash logs for the specified region
         if (logs && logs.length > 0) { // Check if logs exist
-            updateDatabaseFromLogs(logs); // Update the database with logs
+            updateDatabaseFromLogs(logs, node); // Update the database with logs
             res.json({ message: `Region '${region}' toggled back on. Crash logs read and database updated.` });
         } else {
             res.json({ message: `Region '${region}' toggled back on. No crash logs found.` });
@@ -571,12 +594,29 @@ app.post('/toggleRegion', (req, res) => {
 });
 
 // Function to update the database with logs
-function updateDatabaseFromLogs(logs) {
+function updateDatabaseFromLogs(logs, node) {
+    let pool = determinePool(node)
+
+    switch (node) {
+        case 'central':
+            pool = central
+            break;
+        case 'luzon':
+            pool = luzon
+            break;
+        case 'visayas_mindanao':
+            pool = vismin
+            break;
+        default:
+            console.error('Invalid node:', node);
+            break;
+    }
+    
     logs.forEach(log => {
         const [, apptid, age] = log.match(/ApptId: (\w+), Age:(\d+)/) || [];
         if (apptid && age) {
             const query = `UPDATE appointment SET pxage = ? WHERE apptid = ?`;
-            central.query(query, [age, apptid], (error, results) => {
+            pool.query(query, [age, apptid], (error, results) => {
                 if (error) {
                     console.error(`Error updating database for appointment ID ${apptid}:`, error);
                 } else {
@@ -590,7 +630,8 @@ function updateDatabaseFromLogs(logs) {
 }
 
 // Function to read crash logs for a specific region
-function readLogs(apptid, node) {
+// Function to read crash logs for a specific region
+function readLogs(node) {
     const logsFolder = 'crash logs';
     let fileName;
     switch (node) {
@@ -605,14 +646,14 @@ function readLogs(apptid, node) {
             break;
         default:
             console.error('Invalid node:', node);
-            return; // Return if node is not recognized
+            return []; // Return an empty array if node is not recognized
     }
     const filePath = path.join(__dirname, logsFolder, fileName);
     
     // Check if the file exists
     if (!fs.existsSync(filePath)) {
         console.log(`No logs found for ${node}`);
-        return;
+        return []; // Return an empty array if the file doesn't exist
     }
     
     // Read the file contents
@@ -621,18 +662,49 @@ function readLogs(apptid, node) {
     // Split logs by new line and filter out empty lines
     const logLines = logs.split('\n').filter(line => line.trim() !== '');
 
-    // Filter logs by appointment ID
-    const filteredLogs = logLines.filter(line => line.includes(`ApptId: ${apptid}`));
+    // Clear the logs file
+    clearLogsFile(node);
 
-    // Clear file contents after reading
-    fs.writeFileSync(filePath, '', 'utf8');
-
-    // Return filtered logs
-    return filteredLogs;
+    // Return all logs for the specified region
+    console.log("Filtered logs:", logLines);
+    return logLines;
 }
 
+// Function to clear crash logs file for a specific region
+function clearLogsFile(node) {
+    const logsFolder = 'crash logs';
+    let fileName;
+    switch (node) {
+        case 'central':
+            fileName = 'central_crash_logs.txt';
+            break;
+        case 'luzon':
+            fileName = 'luzon_crash_logs.txt';
+            break;
+        case 'visayas_mindanao':
+            fileName = 'visayas_mindanao_crash_logs.txt';
+            break;
+        default:
+            console.error('Invalid node:', node);
+            return; // Return without doing anything if node is not recognized
+    }
+    const filePath = path.join(__dirname, logsFolder, fileName);
 
+    // Check if the file exists
+    if (!fs.existsSync(filePath)) {
+        console.log(`No logs found for ${node}`);
+        return; // Return without doing anything if the file doesn't exist
+    }
 
+    // Clear the file contents
+    fs.writeFileSync(filePath, '', 'utf8', (err) => {
+        if (err) {
+            console.error('Error clearing logs file:', err);
+        } else {
+            console.log(`Logs cleared for ${node}`);
+        }
+    });
+}
 
 
 function determineIsland(region) {

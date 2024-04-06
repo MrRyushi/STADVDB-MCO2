@@ -221,7 +221,7 @@ document.addEventListener("DOMContentLoaded", function() {
         divToDisplay.innerHTML = ''; // Clear previous read age results
         
         // Check if data is not empty and contains age information
-        if (data.centralAge && data.destinationAge) {
+        if (data.centralAge || data.destinationAge) {
             // Create paragraph elements to hold the age results
             const centralAgeParagraph = document.createElement('p');
             centralAgeParagraph.textContent = `Patient Age from Central Pool: ${data.centralAge}`;
@@ -379,6 +379,7 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
 
+
     // Function to update button text and color
     function updateButton(buttonId, region) {
         
@@ -409,17 +410,6 @@ document.addEventListener("DOMContentLoaded", function() {
         console.error('Error fetching regions data:', error);
     });
 
-    // Function to update button text and color
-    function updateButton(buttonId, region) {
-        const button = document.getElementById(buttonId);
-        if (regions[region]) {
-            button.innerHTML = `Turn Off ${region.charAt(0).toUpperCase() + region.slice(1)}`;
-            button.style.backgroundColor = 'green';
-        } else {
-            button.innerHTML = `Turn On ${region.charAt(0).toUpperCase() + region.slice(1)}`;
-            button.style.backgroundColor = 'red';
-        }
-    }
 
     // Function to toggle region value and update button
     function toggleRegion(region) {
