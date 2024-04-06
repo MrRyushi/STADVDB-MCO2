@@ -184,6 +184,7 @@ document.addEventListener("DOMContentLoaded", function() {
 
     populateDropdown('dropdown1')
     populateDropdown('dropdown2')
+    populateDropdown('dropdown3')
     // Function to populate dropdown
     function populateDropdown(dropdownID) {
         fetchData('http://localhost:3000/getApptIds')
@@ -236,6 +237,31 @@ document.addEventListener("DOMContentLoaded", function() {
             divToDisplay.textContent = 'No valid age information found.';
         }
     }
+
+    function displayUpdatedAgeResults(data) {
+        console.log(data);
+        const divToDisplay = document.getElementById('updatedAgeResults');
+    
+        divToDisplay.innerHTML = ''; // Clear previous read age results
+        
+        // Check if data is not empty and contains age information
+        if (data.centralAge && data.destinationAge) {
+            // Create paragraph elements to hold the age results
+            const centralAgeParagraph = document.createElement('p');
+            centralAgeParagraph.textContent = `Patient Age from Central Pool: ${data.centralAge}`;
+            
+            const destinationAgeParagraph = document.createElement('p');
+            destinationAgeParagraph.textContent = `Patient Age from Destination Pool: ${data.destinationAge}`;
+        
+            // Append the paragraphs to the read age results div
+            divToDisplay.appendChild(centralAgeParagraph);
+            divToDisplay.appendChild(destinationAgeParagraph);
+        } else {
+            // If no data found or missing age information, display a message
+            divToDisplay.textContent = 'No valid age information found.';
+        }
+    }
+    
     
     document.getElementById('readPatientAge').addEventListener('click', function() {
         let apptIdToRead = document.getElementById('dropdown1').value;
@@ -343,6 +369,7 @@ document.addEventListener("DOMContentLoaded", function() {
             // Handle success response from the backend
             console.log('Success:', data);
             // Optionally, update the UI or display a success message
+            displayUpdatedAgeResults(data)
         })
         .catch(error => {
             // Handle error from the backend or network error

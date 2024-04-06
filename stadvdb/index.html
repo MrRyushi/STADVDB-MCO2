@@ -62,30 +62,6 @@
     </div>
 
     <div>
-        <h2>Update</h2>
-        <!--
-        <form id="updateForm">
-            <input id="updateApptid" name="updateApptid" placeholder="Appointment ID" type="text"/>
-            <button id="checkApptid" type="button">Check Appointment ID</button>
-            <div id="updateFields" style="display: none;">
-                <input id="updateApptdate" name="updateApptdate" placeholder="Date of Appointment" type="date"/>
-                <input id="updatePxid" name="updatePxid" placeholder="Patient ID" type="text"/>
-                <input id="updatePxage" name="updatePxage" placeholder="Patient Age" type="number"/>
-                <input id="updatePxgender" name="updatePxgender" placeholder="Patient Gender" type="text"/>
-                <input id="updateDoctorid" name="updateDoctorid" placeholder="Doctor ID" type="text"/>
-                <input id="updateHospitalname" name="updateHospitalname" placeholder="Hospital Name" type="text"/>
-                <input id="updateHospitalcity" name="updateHospitalcity" placeholder="Hospital City" type="text"/>
-                <input id="updateHospitalprovince" name="updateHospitalprovince" placeholder="Hospital Province" type="text"/>
-                <input id="updateHospitalregion" name="updateHospitalregion" placeholder="Hospital Region" type="text"/>
-                <select id="insertIsland">
-                    <option value="luzon">Luzon</option>
-                    <option value="visayas">Visayas</option>
-                    <option value="mindanao">Mindanao</option>
-                </select>
-                <button id="submitUpdate" type="submit">Update Appointment</button>
-            </div>
-        </form>
-        -->
         <h2>Update Appointment</h2>
         <form id="updateForm">
             <input id="apptid" name="apptid" placeholder="Appointment ID" type="text" required />
@@ -173,7 +149,24 @@
             <option value="" disabled selected>Select an Appointment ID</option>
         </select>
         <input id="updateAge" placeholder="New Age of Patient" type="number"/>
+        <button id="updatePatientAge">Read and Update</button>
+    </div>
+
+    <div id="updatedAgeResults">
+        <!-- Updated Patient age results will be displayed here -->
+    </div>
+
+    <h2>Case 3: Updating the Same Data Item in Two Nodes (Patient Age)</h2>
+    <div>
+        <select id="dropdown3">
+            <option value="" disabled selected>Select an Appointment ID</option>
+        </select>
+        <input id="updateAge2" placeholder="New Age of Patient" type="number"/>
         <button id="updatePatientAge">Update</button>
+    </div>
+
+    <div id="updatedAgeResults2">
+        <!-- Updated Patient age results will be displayed here -->
     </div>
 
     <div>

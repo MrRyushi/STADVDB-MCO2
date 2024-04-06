@@ -93,10 +93,11 @@ function checkAppointmentExists(pool, apptid, callback) {
 /// Route to handle inserting data
 app.post('/insertAppt', async (req, res) => {
     const data = req.body;
+    const hospitalRegion = data.hospitalRegion;
     console.log(data);
 
     let sourcePool = central;
-    let destinationPool = determinePool(data)
+    let destinationPool = determinePool(hospitalRegion)
 
     // Check if the appointment ID already exists
     checkAppointmentExists(sourcePool, data.apptid, (appointmentExists) => {
@@ -150,6 +151,7 @@ app.post('/searchAppt', (req, res) => {
 
 app.put('/updateAppt', async (req, res) => {
     const data = req.body;
+    const hospitalRegion = data.hospitalregion
     console.log(data);
 
     // Check if the required fields are present in the request body
@@ -160,7 +162,7 @@ app.put('/updateAppt', async (req, res) => {
         }
     }
     let sourcePool = central;
-    let destinationPool = determinePool(data)
+    let destinationPool = determinePool(hospitalRegion)
 
     // Check if the appointment ID already exists
     checkAppointmentExists(sourcePool, data.apptid, (appointmentExists) => {
@@ -185,25 +187,6 @@ app.put('/updateAppt', async (req, res) => {
         }
     });
 });
-
-/*
-// Route to handle updating appointment information after verifying appointment ID exists
-app.put('/updateAppt', (req, res) => {
-    const updatedData = req.body;
-    const apptid = updatedData.apptid;
-    central.query(`UPDATE appointment SET apptdate = ?, pxid = ?, pxage = ?, pxgender = ?, doctorid = ?, hospitalname = ?, hospitalcity = ?, hospitalprovince = ?, hospitalregion = ? WHERE apptid = ?`,
-    [updatedData.apptdate, updatedData.pxid, updatedData.pxage, updatedData.pxgender, updatedData.doctorid, updatedData.hospitalname, updatedData.hospitalcity, updatedData.hospitalprovince, updatedData.hospitalregion, apptid],
-    (err, result) => {
-        if (err) {
-            console.error('Error updating appointment:', err);
-            res.status(500).json({ error: 'Error updating appointment' });
-        } else {
-            console.log('Updated appointment:', result);
-            res.json({ message: 'Appointment updated successfully' });
-        }
-    });
-});
-*/
 
 
 // Route to fetch data from MySQL and send to frontend
@@ -326,30 +309,6 @@ app.post('/updateAge', (req, res) => {
     const island = determineIsland(hospitalRegion)
     console.log("island: " + island)
 
-    switch (hospitalRegion) {
-        case 'Ilocos Region (Region I)':
-        case 'Cagayan Valley (Region II)':
-        case 'Central Luzon (Region III)':
-        case 'CALABARZON (Region IV-A)':
-        case 'Bicol Region (Region V)':
-        case 'National Capital Region (NCR)':
-        case 'Cordillera Administrative Region (CAR)':
-        case 'MIMAROPA Region':
-            destinationPool = luzon; break;
-        case 'Western Visayas (Region VI)':
-        case 'Central Visayas (Region VII)':
-        case 'Eastern Visayas (Region VIII)':
-        case 'Zamboanga Peninsula (Region IX)':
-        case 'Northern Mindanao (Region X)':
-        case 'Davao Region (Region XI)':
-        case 'SOCCSKSARGEN (Cotabato Region) (XII)':
-        case 'Bangsamoro Autonomous Region in Muslim Mindanao (BARMM)':
-        case 'Caraga (Region XIII)':
-            destinationPool = vismin; break;
-        default:
-            // If no specific region is specified or unknown, default to central
-            destinationPool = central; break;
-    }
 
     // Call the global function to set the transaction isolation level
     Promise.all([
@@ -440,16 +399,82 @@ app.post('/updateAge', (req, res) => {
             })
         ])
     })
-    .then(() => {
-        // Send response after both queries have completed
-        res.json({ message: 'Column updated successfully AAAAAAAAAaaa' });
+    .then(([centralAge, destinationAge]) => {
+        // Send response with patient age from both pools
+        res.json({
+            centralAge: centralAge,
+            destinationAge: destinationAge,
+            message: 'Patient age read successfully'
+        });
     })
+    // .then(() => {
+    //     // Send response after both queries have completed
+    //     res.json({ message: 'Column updated successfully AAAAAAAAAaaa' });
+        
+    // })
     .catch(error => {
         // Handle errors
         console.error('Error:', error);
         res.status(500).json({ error: error });
     });
 });
+
+// Route to handle concurrent read and write operations across different nodes
+app.post('/concurrentReadWrite', (req, res) => {
+    const apptid = req.body.apptid;
+    const newAge = req.body.newAge;
+    const hospitalRegion = req.body.hospitalRegion;
+    const query = `SELECT pxage FROM appointment WHERE apptid = ?`;
+    const centralPool = central;
+    let destinationPool = determinePool(hospitalRegion);
+
+    // Call the global function to set the transaction isolation level
+    Promise.all([
+        global.setSerializable(centralPool),
+        global.setSerializable(destinationPool)
+    ])
+    .then(() => {
+        // Continue with the rest of the code after the isolation level has been set
+        return Promise.all([
+            // Query to read the patient's age from the destination pool
+            new Promise((resolve, reject) => {
+                destinationPool.query(query, [apptid], (error, results, fields) => {
+                    if (error) {
+                        console.error('Error reading patient age from destination pool:', error);
+                        reject(error);
+                        return;
+                    }
+                    // Resolve with the patient's age if found, otherwise null
+                    const destinationAge = results.length > 0 ? results[0].pxage : null;
+                    resolve(destinationAge);
+                });
+            }),
+            // Query to update the patient's age in the central pool
+            new Promise((resolve, reject) => {
+                centralPool.query(`UPDATE appointment SET pxage = ? WHERE apptid = ?`, [newAge, apptid], (error, results, fields) => {
+                    if (error) {
+                        console.error('Error updating patient age in central pool:', error);
+                        reject(error);
+                        return;
+                    }
+                    resolve();
+                });
+            })
+        ]);
+    })
+    .then(([destinationAge]) => {
+        // Send response with the patient's age from the destination pool
+        res.json({ destinationAge, message: 'Concurrent read and write operations completed successfully' });
+    })
+    .catch(error => {
+        // Handle errors
+        console.error('Error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    });
+});
+
+
+
 
 // Route to get hospital region by appointment ID
 app.post('/getHospitalRegion', (req, res) => {
@@ -485,16 +510,16 @@ app.get('/regions', (req, res) => {
     res.json({ regions });
 });
 
-// Define the '/toggleRegion' endpoint
-app.post('/toggleRegion', (req, res) => {
-    const { region, value } = req.body;
+// // Define the '/toggleRegion' endpoint
+// app.post('/toggleRegion', (req, res) => {
+//     const { region, value } = req.body;
 
-    // Update the value of the region received from the request
-    regions[region] = value;
+//     // Update the value of the region received from the request
+//     regions[region] = value;
 
-    // Send a response indicating success
-    res.json({ message: `Region '${region}' toggled to ${value}` });
-});
+//     // Send a response indicating success
+//     res.json({ message: `Region '${region}' toggled to ${value}` });
+// });
 
 function writeLogs(apptid, age, node){
     const logsFolder = 'crash logs';
@@ -514,7 +539,7 @@ function writeLogs(apptid, age, node){
     }
     
     // Write to the file
-    fs.appendFileSync(filePath, logData, 'utf8', (err) => {
+    fs.appendFile(filePath, logData, 'utf8', (err) => {
         if (err) {
             console.error('Error writing to file:', err);
             return;
@@ -522,6 +547,93 @@ function writeLogs(apptid, age, node){
         console.log('Data has been written to file successfully.');
     });
 }
+
+// Route to toggle region status and handle crash logs if region is toggled back on
+app.post('/toggleRegion', (req, res) => {
+    const { region, value } = req.body;
+
+    // Update the value of the region received from the request
+    regions[region] = value;
+
+    // If the region is being toggled back on, read crash logs and update the database
+    if (value) {
+        const logs = readLogs(region); // Read crash logs for the specified region
+        if (logs && logs.length > 0) { // Check if logs exist
+            updateDatabaseFromLogs(logs); // Update the database with logs
+            res.json({ message: `Region '${region}' toggled back on. Crash logs read and database updated.` });
+        } else {
+            res.json({ message: `Region '${region}' toggled back on. No crash logs found.` });
+        }
+    } else {
+        // Send a response indicating success
+        res.json({ message: `Region '${region}' toggled off.` });
+    }
+});
+
+// Function to update the database with logs
+function updateDatabaseFromLogs(logs) {
+    logs.forEach(log => {
+        const [, apptid, age] = log.match(/ApptId: (\w+), Age:(\d+)/) || [];
+        if (apptid && age) {
+            const query = `UPDATE appointment SET pxage = ? WHERE apptid = ?`;
+            central.query(query, [age, apptid], (error, results) => {
+                if (error) {
+                    console.error(`Error updating database for appointment ID ${apptid}:`, error);
+                } else {
+                    console.log(`Database updated successfully for appointment ID ${apptid}`);
+                }
+            });
+        } else {
+            console.error(`Invalid log entry: ${log}`);
+        }
+    });
+}
+
+// Function to read crash logs for a specific region
+function readLogs(apptid, node) {
+    const logsFolder = 'crash logs';
+    let fileName;
+    switch (node) {
+        case 'central':
+            fileName = 'central_crash_logs.txt';
+            break;
+        case 'luzon':
+            fileName = 'luzon_crash_logs.txt';
+            break;
+        case 'visayas_mindanao':
+            fileName = 'visayas_mindanao_crash_logs.txt';
+            break;
+        default:
+            console.error('Invalid node:', node);
+            return; // Return if node is not recognized
+    }
+    const filePath = path.join(__dirname, logsFolder, fileName);
+    
+    // Check if the file exists
+    if (!fs.existsSync(filePath)) {
+        console.log(`No logs found for ${node}`);
+        return;
+    }
+    
+    // Read the file contents
+    const logs = fs.readFileSync(filePath, 'utf8');
+    
+    // Split logs by new line and filter out empty lines
+    const logLines = logs.split('\n').filter(line => line.trim() !== '');
+
+    // Filter logs by appointment ID
+    const filteredLogs = logLines.filter(line => line.includes(`ApptId: ${apptid}`));
+
+    // Clear file contents after reading
+    fs.writeFileSync(filePath, '', 'utf8');
+
+    // Return filtered logs
+    return filteredLogs;
+}
+
+
+
+
 
 function determineIsland(region) {
     switch (region) {
@@ -550,8 +662,8 @@ function determineIsland(region) {
     }
 }
 
-function determinePool(data) {
-    switch (data.hospitalregion) {
+function determinePool(hospitalregion) {
+    switch (hospitalregion) {
         case 'Ilocos Region (Region I)':
         case 'Cagayan Valley (Region II)':
         case 'Central Luzon (Region III)':
