@@ -353,6 +353,7 @@ app.post('/updateAge', (req, res) => {
             // First query to update
             new Promise((resolve, reject) => {
                 if (regions.central) {
+
                     central.query(query2, [newAge, apptid], (error, results, fields) => {
                         if (error) {
                             console.error('Error updating column:', error);
@@ -363,6 +364,10 @@ app.post('/updateAge', (req, res) => {
                         resolve();
                     });
                 } else {
+                    if (shouldSimulateFailure()) {
+                        console.error('Simulating failure in writing to central node');
+                        throw new Error('Error updating central node - simulated failure');
+                    }
                     writeLogs(apptid, newAge, 'central');
                     resolve(); // Resolve even if no update was performed
                 }
@@ -381,11 +386,17 @@ app.post('/updateAge', (req, res) => {
                             resolve();
                         });
                     } else {
+                        if (shouldSimulateFailure()) {
+                            console.error(`Simulating failure in writing to Luzon column (${destinationPool})`);
+                            reject(`Error updating Luzon node - simulated failure`);
+                            return;
+                        }
                         writeLogs(apptid, newAge, 'luzon');
                         resolve(); // Resolve even if no update was performed
                     }
                 } else if (island == 'vismin') {
                     if (regions.visayas_mindanao) {
+                 
                         destinationPool.query(query2, [newAge, apptid], (error, results, fields) => {
                             if (error) {
                                 console.error('Error updating column:', error);
@@ -396,6 +407,11 @@ app.post('/updateAge', (req, res) => {
                             resolve();
                         });
                     } else {
+                        if (shouldSimulateFailure()) {
+                            console.error(`Simulating failure in writing to Vismin column (${destinationPool})`);
+                            reject(`Error updating Vismin node - simulated failure`);
+                            return;
+                        }
                         writeLogs(apptid, newAge, 'visayas_mindanao');
                         resolve(); // Resolve even if no update was performed
                     }
@@ -451,6 +467,29 @@ app.post('/updateAge', (req, res) => {
     });
 });
 
+// Modify shouldSimulateFailure function to return the value of the failure simulation state
+let simulateFailureToggle;
+
+function shouldSimulateFailure() {
+    if (simulateFailureToggle == true) {
+        return true;
+    } else if (simulateFailureToggle = false) {
+        return false
+    }
+}
+
+// Route to toggle failure simulation
+app.post('/toggleFailure', (req, res) => {
+    const { simulateFailure } = req.body;
+
+    // Set the global variable to the received value
+    simulateFailureToggle = simulateFailure;
+    console.log(simulateFailureToggle)
+
+    // Send a response indicating success
+    res.json({ message: `Failure simulation toggled ${simulateFailure ? 'on' : 'off'}.` });
+});
+
 // Route to handle concurrent read and write operations across different nodes
 app.post('/concurrentReadWrite', (req, res) => {
     const apptid = req.body.apptid;
@@ -504,9 +543,6 @@ app.post('/concurrentReadWrite', (req, res) => {
         res.status(500).json({ error: 'Internal Server Error' });
     });
 });
-
-
-
 
 // Route to get hospital region by appointment ID
 app.post('/getHospitalRegion', (req, res) => {
@@ -611,7 +647,7 @@ function updateDatabaseFromLogs(logs, node) {
             console.error('Invalid node:', node);
             break;
     }
-    
+
     logs.forEach(log => {
         const [, apptid, age] = log.match(/ApptId: (\w+), Age:(\d+)/) || [];
         if (apptid && age) {
@@ -629,7 +665,6 @@ function updateDatabaseFromLogs(logs, node) {
     });
 }
 
-// Function to read crash logs for a specific region
 // Function to read crash logs for a specific region
 function readLogs(node) {
     const logsFolder = 'crash logs';

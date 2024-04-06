@@ -154,7 +154,7 @@ document.addEventListener("DOMContentLoaded", function() {
     });
     
 
-    const selectedRegion = document.getElementById('regionSelect').value
+    //const selectedRegion = document.getElementById('regionSelect').value
 
     function convertFormDataToJson(formData) {
         const jsonData = {};
@@ -379,7 +379,6 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
 
-
     // Function to update button text and color
     function updateButton(buttonId, region) {
         
@@ -392,6 +391,8 @@ document.addEventListener("DOMContentLoaded", function() {
             button.style.backgroundColor = 'red';
         }
     }
+
+    
 
     let regions = {}; // Define regions variable globally to make it accessible to all functions
 
@@ -445,6 +446,34 @@ document.addEventListener("DOMContentLoaded", function() {
     document.getElementById('visayas_mindanaoBtn').addEventListener('click', function() {
         toggleRegion('visayas_mindanao');
     });
+
+
+    let simulateFailure = false;
+
+    function toggleFailureButton() {
+        simulateFailure = !simulateFailure;
+        const button = document.getElementById('simulateFailureBtn');
+        button.textContent = simulateFailure ? 'Simulate Failure is On' : 'Simulate Failure is Off';
+    }
+
+    document.getElementById('simulateFailureBtn').addEventListener('click', function() {
+        toggleFailureButton();
+        fetch('http://localhost:3000/toggleFailure', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ simulateFailure: simulateFailure })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log(data.message);
+        })
+        .catch(error => {
+            console.error('Error toggling failure simulation:', error);
+        });
+    });
+
 
 
 });
