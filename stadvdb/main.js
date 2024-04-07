@@ -107,6 +107,8 @@ document.addEventListener("DOMContentLoaded", function() {
     function displaySearchResults(results) {
         const searchResultsContainer = document.getElementById('searchResults');
         searchResultsContainer.innerHTML = ''; // Clear previous search results
+        console.log("es")
+        console.log(results)
     
         // Check if results are not empty
         if (results && results.length > 0) {
@@ -117,7 +119,7 @@ document.addEventListener("DOMContentLoaded", function() {
             results.forEach(result => {
                 // Create a list item for each result
                 const li = document.createElement('li');
-                li.textContent = `Appointment ID: ${result.apptid}, Date: ${result.apptdate}, Patient ID: ${result.pxid}, Gender: ${result.pxgender}, Doctor ID: ${result.doctorid}, Hospital: ${result.hospitalname}, City: ${result.hospitalcity}, Province: ${result.hospitalprovince}, Region: ${result.hospitalregion}`;
+                li.textContent = `Appointment ID: ${result.apptid}, Date: ${result.apptdate}, Patient ID: ${result.pxid}, Patient Age: ${result.pxage}, Gender: ${result.pxgender}, Doctor ID: ${result.doctorid}, Hospital: ${result.hospitalname}, City: ${result.hospitalcity}, Province: ${result.hospitalprovince}, Region: ${result.hospitalregion}`;
     
                 // Append the list item to the unordered list
                 ul.appendChild(li);
