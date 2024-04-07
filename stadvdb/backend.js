@@ -353,18 +353,7 @@ app.post('/updateAge', (req, res) => {
             // First query to update
             new Promise((resolve, reject) => {
                 if (regions.central) {
-
-                    central.query(query2, [newAge, apptid], (error, results, fields) => {
-                        if (error) {
-                            console.error('Error updating column:', error);
-                            reject('Error updating column');
-                            return;
-                        }
-                        console.log('Central Column updated successfully');
-                        resolve();
-                    });
-                } else {
-                    if (shouldSimulateFailure()) {
+                    if (shouldSimulateFailureCentral()) {
                         try {
                             throwError('central')
                         } 
@@ -375,27 +364,25 @@ app.post('/updateAge', (req, res) => {
                     
                         }
                     } else {
-                        writeLogs(apptid, newAge, 'central');
-                        resolve(); // Resolve even if no update was performed
+                        central.query(query2, [newAge, apptid], (error, results, fields) => {
+                            if (error) {
+                                console.error('Error updating column:', error);
+                                reject('Error updating column');
+                                return;
+                            }
+                            console.log('Central Column updated successfully');
+                            resolve();
+                        });
                     }
+                } else {
+                    writeLogs(apptid, newAge, 'central')
                 }
             }),
             // Second query to update
             new Promise((resolve, reject) => {
                 if (island == 'luzon') {
                     if (regions.luzon) {
-                        destinationPool.query(query2, [newAge, apptid], (error, results, fields) => {
-                            if (error) {
-                                console.error('Error updating column:', error);
-                                reject('Error updating column');
-                                return;
-                            }
-                            console.log('Luzon Column updated successfully');
-                            resolve();
-                        });
-                    } else {
-                        if (shouldSimulateFailure()) {
-                           
+                        if (shouldSimulateFailureLuzonVizMin()) {
                             try {
                                 throwError('luzon')
                             }
@@ -406,24 +393,23 @@ app.post('/updateAge', (req, res) => {
                             }
                         }
                         else {
-                            writeLogs(apptid, newAge, 'luzon');
-                            resolve(); // Resolve even if no update was performed
+                            destinationPool.query(query2, [newAge, apptid], (error, results, fields) => {
+                                if (error) {
+                                    console.error('Error updating column:', error);
+                                    reject('Error updating column');
+                                    return;
+                                }
+                                console.log('Luzon Column updated successfully');
+                                resolve();
+                            
+                            });
                         }
-                        
+                    } else {
+                        writeLogs(apptid, newAge, 'luzon')
                     }
                 } else if (island == 'vismin') {
-                    if (regions.visayas_mindanao) {    
-                        destinationPool.query(query2, [newAge, apptid], (error, results, fields) => {
-                            if (error) {
-                                console.error('Error updating column:', error);
-                                reject('Error updating column');
-                                return;
-                            }
-                            console.log('Vismin Column updated successfully');
-                            resolve();
-                        });
-                    } else {
-                        if (shouldSimulateFailure()) {
+                    if (regions.visayas_mindanao) { 
+                        if (shouldSimulateFailureLuzonVizMin()) {
                             try {
                                 throwError('visayas_mindanao')
                             } 
@@ -434,10 +420,18 @@ app.post('/updateAge', (req, res) => {
                             }  
                         } 
                         else {
-                            writeLogs(apptid, newAge, 'visayas_mindanao');
-                            resolve(); // Resolve even if no update was performed
+                            destinationPool.query(query2, [newAge, apptid], (error, results, fields) => {
+                                if (error) {
+                                    console.error('Error updating column:', error);
+                                    reject('Error updating column');
+                                    return;
+                                }
+                                console.log('Vismin Column updated successfully');
+                                resolve();
+                            });
                         }
-
+                    } else {
+                        writeLogs(apptid, newAge, 'visayas_mindanao')
                     }
                 } else {
                     resolve(); // Resolve if island is not luzon or vismin
@@ -495,26 +489,62 @@ function throwError(node) {
     throw new Error(`Simulating failure in writing to ${node} node`);
 }
 // Modify shouldSimulateFailure function to return the value of the failure simulation state
-let simulateFailureToggle;
+let simulateFailureCentral;
+let simulateFailureLuzonVizMin;
 
-function shouldSimulateFailure() {
-    if (simulateFailureToggle === true) {
+function shouldSimulateFailureCentral() {
+    if (simulateFailureCentral === true) {
         return true;
-    } else if (simulateFailureToggle === false) {
+    } else if (simulateFailureCentral === false) {
+        return false;
+    }
+}
+
+function shouldSimulateFailureLuzonVizMin() {
+    if (simulateFailureLuzonVizMin === true) {
+        return true;
+    } else if (simulateFailureLuzonVizMin === false) {
         return false;
     }
 }
 
 // Route to toggle failure simulation
-app.post('/toggleFailure', (req, res) => {
-    const { simulateFailure } = req.body;
+app.post('/toggleFailureCentral', (req, res) => {
+    const { simulateFailureToggle } = req.body;
 
     // Set the global variable to the received value
-    simulateFailureToggle = simulateFailure;
-    console.log(simulateFailureToggle)
+    simulateFailureCentral = simulateFailureToggle;
+    console.log(simulateFailureCentral)
+
+    if(simulateFailureCentral === false){
+        // read logs of luzon
+        let centralLogs = readLogs('central')
+        updateDatabaseFromLogs(centralLogs, 'central')
+    }
 
     // Send a response indicating success
-    res.json({ message: `Failure simulation toggled ${simulateFailure ? 'on' : 'off'}.` });
+    res.json({ message: `Failure simulation toggled ${simulateFailureCentral ? 'on' : 'off'}.` });
+});
+
+// Route to toggle failure simulation
+app.post('/toggleFailureLuzonVizMin', (req, res) => {
+    const { simulateFailureToggle } = req.body;
+
+    // Set the global variable to the received value
+    simulateFailureLuzonVizMin = simulateFailureToggle;
+    console.log(simulateFailureLuzonVizMin)
+
+    if(simulateFailureLuzonVizMin === false){
+        // read logs of luzon
+        let luzonLogs = readLogs('luzon')
+        updateDatabaseFromLogs(luzonLogs, 'luzon')
+
+        let vizminLogs = readLogs('visayas_mindanao')
+        updateDatabaseFromLogs(vizminLogs, 'visayas_mindanao')
+    }
+
+    // Send a response indicating success
+    res.json({ message: `Failure simulation toggled ${simulateFailureLuzonVizMin ? 'on' : 'off'}.` });
 });
 
 // Route to handle concurrent read and write operations across different nodes
