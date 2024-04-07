@@ -91,7 +91,6 @@ function checkAppointmentExists(pool, apptid, callback) {
     });
 }
 
-/// Route to handle inserting data
 app.post('/insertAppt', async (req, res) => {
     const data = req.body;
     const hospitalRegion = data.hospitalRegion;
@@ -99,27 +98,39 @@ app.post('/insertAppt', async (req, res) => {
 
     let sourcePool = central;
     let destinationPool = determinePool(hospitalRegion)
+    let island = determineIsland(hospitalRegion);
 
     // Check if the appointment ID already exists
     checkAppointmentExists(sourcePool, data.apptid, (appointmentExists) => {
         if (appointmentExists) {
             return res.status(400).json({ error: 'Appointment ID already exists' });
         } else {
-            sourcePool.query(`INSERT INTO appointment (apptid, apptdate, pxid, pxage, pxgender, doctorid, hospitalname, hospitalcity, hospitalprovince, hospitalregion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [data.apptid, data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion], (err, result) => {
-                if (err) {
-                    console.error('Error inserting data into source:', err);
-                    return res.status(500).json({ error: 'Error inserting data into source' });
-                } else {
-                    console.log('Data inserted into source successfully:', result);
-            
-                    // Synchronize inserted data 
-                    if (destinationPool != central) {
-                        syncInsertAppointmentData(destinationPool, data);
+            if (regions.central) {
+                sourcePool.query(`INSERT INTO appointment (apptid, apptdate, pxid, pxage, pxgender, doctorid, hospitalname, hospitalcity, hospitalprovince, hospitalregion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [data.apptid, data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion], (err, result) => {
+                    if (err) {
+                        console.error('Error inserting data into source:', err);
+                        return res.status(500).json({ error: 'Error inserting data into source' });
+                    } else {
+                        console.log('Data inserted into source successfully:', result);
+
+                        // Synchronize inserted data
+                        if (destinationPool != central) {
+                            if (island == 'luzon' && !regions.luzon) {
+                                writeLogs(data.apptid, data, 'luzon');
+                            } else if (island == 'vismin' && !regions.visayas_mindanao) {
+                                writeLogs(data.apptid, data, 'visayas_mindanao');
+                            } else {
+                                syncInsertAppointmentData(destinationPool, data);
+                            }
+                        }
+
+                        res.json({ message: 'Data inserted successfully' });
                     }
-                    
-                    res.json({ message: 'Data inserted successfully' });
-                }
-            });
+                });
+            } else {
+                writeLogs(data.apptid, data, 'central');
+                res.json({ message: 'Data written to logs successfully' });
+            }
         }
     });
 });
@@ -606,6 +617,7 @@ app.get('/regions', (req, res) => {
 });
 
 function writeLogs(apptid, age, node){
+    const dataString = JSON.stringify(age);
     const logsFolder = 'crash logs';
     let fileName;
     switch(node) {
