@@ -87,13 +87,19 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Text-based reports functions
     // Function to generate the total count of appointments report
-    totalCountAppointments.addEventListener('click', generateTotalCountAppointmentsReport);
+    document.querySelector('#generateReport').addEventListener('click', generateTotalCountAppointmentsReport);
+
     function generateTotalCountAppointmentsReport() {
         const selectedRegion = document.querySelector("#totalAppointments").value;
-        const url = 'http://localhost:3000/totalCountAppointments' + (selectedRegion !== 'all' ? `?region=${selectedRegion}` : '');
+        const url = '/totalCountAppointments' + (selectedRegion !== 'all' ? `?region=${selectedRegion}` : '');
 
         fetch(url)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
             .then(data => {
                 // Display the data in the `#reportsResults` div
                 document.querySelector("#reportsTotalAppt").innerHTML = `<p>Total Count of Appointments: ${data.totalAppointments}</p>`;
@@ -102,6 +108,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 console.error('There was a problem with the fetch operation:', error);
             });
     }
+
     // Function to generate the average age report
     generateAgeReport.addEventListener('click', generateAverageAgeReport);
     function generateAverageAgeReport() {

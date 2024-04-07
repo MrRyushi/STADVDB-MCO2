@@ -93,6 +93,34 @@ function checkAppointmentExists(pool, apptid, callback) {
     });
 }
 
+// Route to handle the total appointments report
+app.get('/totalCountAppointments', async (req, res) => {
+    const region = req.query.region;
+    let pool;
+
+    // Select appropriate pool based on the region
+    switch(region) {
+        case 'luzon':
+            pool = luzon;
+            break;
+        case 'vismin':
+            pool = vismin;
+            break;
+        default:
+            pool = central;
+            break;
+    }
+
+    try {
+        const [rows] = await pool.query('SELECT COUNT(*) AS totalAppointments FROM appointments');
+        const totalAppointments = rows[0].totalAppointments;
+        res.json({ totalAppointments });
+    } catch (error) {
+        console.error('Error fetching total appointments:', error);
+        res.status(500).json({ error: 'Error fetching total appointments' });
+    }
+});
+
 // Route to handle the average age report
 app.get('/averageAge', async (req, res) => {
     const region = req.query.region;
