@@ -467,6 +467,124 @@ app.post('/updateAge', (req, res) => {
     });
 });
 
+
+
+app.post('/updateAge2', (req, res) => {
+    const apptid = req.body.apptid;
+    const newAge = req.body.newAge;
+    const hospitalRegion = req.body.hospitalRegion;
+    const query1 = `SELECT pxage FROM appointment WHERE apptid = ?`;
+    const query2 = `UPDATE appointment SET pxage = ? WHERE apptid = ?`;
+    let destinationPool = determinePool(hospitalRegion);
+    const island = determineIsland(hospitalRegion);
+    console.log("island: " + island);
+
+    // Call the global function to set the transaction isolation level
+    Promise.all([
+        global.setSerializable(central),
+        global.setSerializable(luzon),
+        global.setSerializable(vismin),
+    ])
+    .then(() => {
+        // Execute the process twice
+        return executeUpdateProcess(query1, query2, apptid, newAge, island, hospitalRegion, destinationPool);
+    })
+    .then(() => {
+        // Execute the process second time
+        return executeUpdateProcess(query1, query2, apptid, newAge, island, hospitalRegion, destinationPool);
+    })
+    .then(() => {
+        res.json({ message: "Age updated successfully" });
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    });
+});
+
+function executeUpdateProcess(query1, query2, apptid, newAge, island, hospitalRegion, destinationPool) {
+    return new Promise((resolve, reject) => {
+        // First query to update
+        let firstUpdatePromise = new Promise((resolve, reject) => {
+            if (regions.central) {
+                central.query(query2, [newAge, apptid], (error, results, fields) => {
+                    if (error) {
+                        console.error('Error updating column:', error);
+                        reject('Error updating column');
+                        return;
+                    }
+                    console.log('Central Column updated successfully');
+                    resolve();
+                });
+            } else {
+                if (shouldSimulateFailure()) {
+                    console.error('Simulating failure in writing to central node');
+                    throw new Error('Error updating central node - simulated failure');
+                }
+                writeLogs(apptid, newAge, 'central');
+                resolve(); // Resolve even if no update was performed
+            }
+        });
+
+        // Second query to update
+        let secondUpdatePromise = new Promise((resolve, reject) => {
+            if (island == 'luzon') {
+                if (regions.luzon) {
+                    destinationPool.query(query2, [newAge, apptid], (error, results, fields) => {
+                        if (error) {
+                            console.error('Error updating column:', error);
+                            reject('Error updating column');
+                            return;
+                        }
+                        console.log('Luzon Column updated successfully');
+                        resolve();
+                    });
+                } else {
+                    if (shouldSimulateFailure()) {
+                        console.error(`Simulating failure in writing to Luzon column (${destinationPool})`);
+                        reject(`Error updating Luzon node - simulated failure`);
+                        return;
+                    }
+                    writeLogs(apptid, newAge, 'luzon');
+                    resolve(); // Resolve even if no update was performed
+                }
+            } else if (island == 'vismin') {
+                if (regions.visayas_mindanao) {
+                    destinationPool.query(query2, [newAge, apptid], (error, results, fields) => {
+                        if (error) {
+                            console.error('Error updating column:', error);
+                            reject('Error updating column');
+                            return;
+                        }
+                        console.log('Vismin Column updated successfully');
+                        resolve();
+                    });
+                } else {
+                    if (shouldSimulateFailure()) {
+                        console.error(`Simulating failure in writing to Vismin column (${destinationPool})`);
+                        reject(`Error updating Vismin node - simulated failure`);
+                        return;
+                    }
+                    writeLogs(apptid, newAge, 'visayas_mindanao');
+                    resolve(); // Resolve even if no update was performed
+                }
+            } else {
+                resolve(); // Resolve if island is not luzon or vismin
+            }
+        });
+
+        // Execute the update promises
+        Promise.all([firstUpdatePromise, secondUpdatePromise])
+            .then(() => {
+                resolve();
+            })
+            .catch(error => {
+                reject(error);
+            });
+    });
+}
+
+
 // Modify shouldSimulateFailure function to return the value of the failure simulation state
 let simulateFailureToggle;
 
@@ -490,59 +608,103 @@ app.post('/toggleFailure', (req, res) => {
     res.json({ message: `Failure simulation toggled ${simulateFailure ? 'on' : 'off'}.` });
 });
 
-// Route to handle concurrent read and write operations across different nodes
-app.post('/concurrentReadWrite', (req, res) => {
-    const apptid = req.body.apptid;
-    const newAge = req.body.newAge;
-    const hospitalRegion = req.body.hospitalRegion;
-    const query = `SELECT pxage FROM appointment WHERE apptid = ?`;
-    const centralPool = central;
-    let destinationPool = determinePool(hospitalRegion);
 
-    // Call the global function to set the transaction isolation level
-    Promise.all([
-        global.setSerializable(centralPool),
-        global.setSerializable(destinationPool)
-    ])
-    .then(() => {
-        // Continue with the rest of the code after the isolation level has been set
-        return Promise.all([
-            // Query to read the patient's age from the destination pool
-            new Promise((resolve, reject) => {
-                destinationPool.query(query, [apptid], (error, results, fields) => {
-                    if (error) {
-                        console.error('Error reading patient age from destination pool:', error);
-                        reject(error);
-                        return;
-                    }
-                    // Resolve with the patient's age if found, otherwise null
-                    const destinationAge = results.length > 0 ? results[0].pxage : null;
-                    resolve(destinationAge);
-                });
-            }),
-            // Query to update the patient's age in the central pool
-            new Promise((resolve, reject) => {
-                centralPool.query(`UPDATE appointment SET pxage = ? WHERE apptid = ?`, [newAge, apptid], (error, results, fields) => {
-                    if (error) {
-                        console.error('Error updating patient age in central pool:', error);
-                        reject(error);
-                        return;
-                    }
-                    resolve();
-                });
-            })
-        ]);
-    })
-    .then(([destinationAge]) => {
-        // Send response with the patient's age from the destination pool
-        res.json({ destinationAge, message: 'Concurrent read and write operations completed successfully' });
-    })
-    .catch(error => {
-        // Handle errors
-        console.error('Error:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
-    });
-});
+// app.post('/updateAge2', (req, res) => {
+//     const apptid = req.body.apptid;
+//     const newAge = req.body.newAge;
+//     const hospitalRegion = req.body.hospitalRegion;
+//     const query1 = `SELECT pxage FROM appointment WHERE apptid = ?`;
+//     const query2 = `UPDATE appointment SET pxage = ? WHERE apptid = ?`;
+//     let destinationPool1 = determinePool(hospitalRegion); // First destination pool
+//     let destinationPool2 = determineSecondPool(hospitalRegion); // Second destination pool
+//     const island = determineIsland(hospitalRegion);
+//     console.log("island: " + island);
+
+//     // Call the global function to set the transaction isolation level
+//     Promise.all([
+//         global.setSerializable(central),
+//         global.setSerializable(luzon),
+//         global.setSerializable(vismin),
+//     ])
+//     .then(() => {
+//         // Execute update queries for both nodes
+//         return Promise.all([
+//             // First query to update
+//             new Promise((resolve, reject) => {
+//                 if (regions.central) {
+//                     central.query(query2, [newAge, apptid], (error, results, fields) => {
+//                         if (error) {
+//                             console.error('Error updating column:', error);
+//                             reject('Error updating column');
+//                             return;
+//                         }
+//                         console.log('Central Column updated successfully');
+//                         resolve();
+//                     });
+//                 } else {
+//                     // Handle case when central node update is disabled or fails
+//                     handleUpdateFailure('central', resolve, reject);
+//                 }
+//             }),
+//             // Second query to update
+//             new Promise((resolve, reject) => {
+//                 if (island == 'luzon') {
+//                     if (regions.luzon) {
+//                         destinationPool1.query(query2, [newAge, apptid], (error, results, fields) => {
+//                             if (error) {
+//                                 console.error('Error updating column:', error);
+//                                 reject('Error updating column');
+//                                 return;
+//                             }
+//                             console.log('Luzon Column updated successfully');
+//                             resolve();
+//                         });
+//                     } else {
+//                         // Handle case when Luzon node update is disabled or fails
+//                         handleUpdateFailure('luzon', resolve, reject);
+//                     }
+//                 } else if (island == 'vismin') {
+//                     if (regions.visayas_mindanao) {
+//                         destinationPool2.query(query2, [newAge, apptid], (error, results, fields) => {
+//                             if (error) {
+//                                 console.error('Error updating column:', error);
+//                                 reject('Error updating column');
+//                                 return;
+//                             }
+//                             console.log('Vismin Column updated successfully');
+//                             resolve();
+//                         });
+//                     } else {
+//                         // Handle case when Vismin node update is disabled or fails
+//                         handleUpdateFailure('visayas_mindanao', resolve, reject);
+//                     }
+//                 } else {
+//                     resolve(); // Resolve if island is not Luzon or Vismin
+//                 }
+//             })
+//         ]);
+//     })
+//     .then(() => {
+//         // Send success response
+//         res.json({ message: 'Concurrent update operations completed successfully' });
+//     })
+//     .catch(error => {
+//         // Handle errors
+//         console.error('Error:', error);
+//         res.status(500).json({ error: 'Internal Server Error' });
+//     });
+
+//     // Function to handle update failure for a specific node
+//     function handleUpdateFailure(node, resolve, reject) {
+//         if (shouldSimulateFailure()) {
+//             console.error(`Simulating failure in writing to ${node} node`);
+//             reject(`Error updating ${node} node - simulated failure`);
+//             return;
+//         }
+//         writeLogs(apptid, newAge, node);
+//         resolve(); // Resolve even if no update was performed
+//     }
+// });
 
 // Route to get hospital region by appointment ID
 app.post('/getHospitalRegion', (req, res) => {

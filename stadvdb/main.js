@@ -378,7 +378,88 @@ document.addEventListener("DOMContentLoaded", function() {
         });
     });
 
-
+    document.getElementById('updatePatientAge2').addEventListener('click', function() {
+        let apptIdToUpdate = document.getElementById('dropdown3').value;
+        let ageToUpdate1 = document.getElementById('updateAge2').value;
+        let ageToUpdate2 = document.getElementById('updateAge3').value;
+        let updateOrder = document.getElementById('updateOrder').value;
+    
+        // Fetch hospital regions for both nodes by appointment ID
+        fetch('http://localhost:3000/getHospitalRegion', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ apptid: apptIdToUpdate })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Extract hospital regions from response data
+            const hospitalRegion = data.hospitalRegion;
+    
+            // Create an array with the data to send to the backend for updating age in both nodes
+            let updateData = [];
+    
+            if (updateOrder === "central,destination") {
+                updateData.push({
+                    apptid: apptIdToUpdate,
+                    newAge: ageToUpdate1,
+                    hospitalRegion: hospitalRegion
+                });
+                updateData.push({
+                    apptid: apptIdToUpdate,
+                    newAge: ageToUpdate2,
+                    hospitalRegion: hospitalRegion
+                });
+            } else if (updateOrder === "destination,central") {
+                updateData.push({
+                    apptid: apptIdToUpdate,
+                    newAge: ageToUpdate2,
+                    hospitalRegion: hospitalRegion
+                });
+                updateData.push({
+                    apptid: apptIdToUpdate,
+                    newAge: ageToUpdate1,
+                    hospitalRegion: hospitalRegion
+                });
+            }
+    
+            // Send POST requests to update age in both nodes
+           
+            return fetch('http://localhost:3000/updateAge2', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+        })
+        .then(responses => {
+            // Check if all requests were successful
+            const allRequestsSuccessful = responses.every(response => response.ok);
+            if (!allRequestsSuccessful) {
+                throw new Error('One or more requests failed');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Handle success response from the backend for each node
+            console.log('Success:', data);
+            // Optionally, update the UI or display a success message
+           // displayUpdatedAgeResults(data);
+        })
+        .catch(error => {
+            // Handle error from the backend or network error
+            console.error('Error:', error);
+            // Optionally, display an error message to the user
+        });
+    });
+    
     // Function to update button text and color
     function updateButton(buttonId, region) {
         
