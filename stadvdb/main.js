@@ -447,22 +447,30 @@ document.addEventListener("DOMContentLoaded", function() {
     });
 
 
-    let simulateFailure = false;
+    let simulateFailureCentral = false;
+    let simulateFailureLuzonVizMin = false;
 
-    function toggleFailureButton() {
-        simulateFailure = !simulateFailure;
-        const button = document.getElementById('simulateFailureBtn');
-        button.textContent = simulateFailure ? 'Simulate Failure is On' : 'Simulate Failure is Off';
+    function toggleFailureCentralButton() {
+        simulateFailureCentral = !simulateFailureCentral;
+        const button = document.getElementById('simulateFailureCentral');
+        button.textContent = simulateFailureCentral ? 'Simulate Failure Central is On' : 'Simulate Failure Central is Off';
     }
 
-    document.getElementById('simulateFailureBtn').addEventListener('click', function() {
-        toggleFailureButton();
-        fetch('http://localhost:3000/toggleFailure', {
+    function toggleFailureLuzonVizMinButton() {
+        simulateFailureLuzonVizMin = !simulateFailureLuzonVizMin;
+        const button = document.getElementById('simulateFailureLuzonVizMin');
+        button.textContent = simulateFailureLuzonVizMin ? 'Simulate Failure Luzon / VizMin is On' : 'Simulate Failure Luzon / VizMin is Off';
+    }
+    
+
+    document.getElementById('simulateFailureCentral').addEventListener('click', function() {
+        toggleFailureCentralButton();
+        fetch('http://localhost:3000/toggleFailureCentral', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ simulateFailure: simulateFailure })
+            body: JSON.stringify({ simulateFailureToggle: simulateFailureCentral })
         })
         .then(response => response.json())
         .then(data => {
@@ -472,6 +480,24 @@ document.addEventListener("DOMContentLoaded", function() {
             console.error('Error toggling failure simulation:', error);
         });
     });
+
+    document.getElementById('simulateFailureLuzonVizMin').addEventListener('click', function() {
+        toggleFailureLuzonVizMinButton()
+        fetch('http://localhost:3000/toggleFailureLuzonVizMin', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ simulateFailureToggle: simulateFailureLuzonVizMin })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log(data.message);
+        })
+        .catch(error => {
+            console.error('Error toggling failure simulation:', error);
+        });
+    })
 
 
 
