@@ -38,6 +38,8 @@ const vismin = createPool({
     connectionLimit: 10
 });
 
+
+
 // Function to synchronize appointment data from luzon/vismin to central
 function syncInsertAppointmentData(destinationPool, data) {
     checkAppointmentExists(destinationPool, data.apptid, (appointmentExists) => {
@@ -90,6 +92,66 @@ function checkAppointmentExists(pool, apptid, callback) {
         }
     });
 }
+
+// Route to handle the average age report
+app.get('/averageAge', async (req, res) => {
+    const region = req.query.region;
+    let pool;
+
+    // Select appropriate pool based on the region
+    switch(region) {
+        case 'luzon':
+            pool = luzon;
+            break;
+        case 'vismin':
+            pool = vismin;
+            break;
+        default:
+            pool = central;
+            break;
+    }
+
+    try {
+        const [rows] = await pool.query(`SELECT AVG(age) AS averageAge FROM appointments`);
+        const averageAge = rows[0].averageAge;
+        console.log("im in");
+        res.json({ averageAge });
+    } catch (error) {
+        console.error('Error fetching average age:', error);
+        res.status(500).json({ error: 'Error fetching average age' });
+    }
+});
+
+// Route to handle the gender distribution report
+app.get('/genderDistribution', async (req, res) => {
+    const region = req.query.region;
+    let pool;
+
+    // Select appropriate pool based on the region
+    switch(region) {
+        case 'luzon':
+            pool = luzon;
+            break;
+        case 'vismin':
+            pool = vismin;
+            break;
+        default:
+            pool = central;
+            break;
+    }
+
+    try {
+        const [rows] = await pool.query(`SELECT gender, COUNT(*) AS count FROM appointments GROUP BY gender`);
+        const genderDistribution = {};
+        rows.forEach(row => {
+            genderDistribution[row.gender] = row.count;
+        });
+        res.json({ genderDistribution });
+    } catch (error) {
+        console.error('Error fetching gender distribution:', error);
+        res.status(500).json({ error: 'Error fetching gender distribution' });
+    }
+});
 
 app.post('/insertAppt', async (req, res) => {
     const data = req.body;
@@ -560,58 +622,58 @@ app.post('/toggleFailureLuzonVizMin', (req, res) => {
 });
 
 // Route to handle concurrent read and write operations across different nodes
-app.post('/concurrentReadWrite', (req, res) => {
-    const apptid = req.body.apptid;
-    const newAge = req.body.newAge;
-    const hospitalRegion = req.body.hospitalRegion;
-    const query = `SELECT pxage FROM appointment WHERE apptid = ?`;
-    const centralPool = central;
-    let destinationPool = determinePool(hospitalRegion);
+// app.post('/concurrentReadWrite', (req, res) => {
+//     const apptid = req.body.apptid;
+//     const newAge = req.body.newAge;
+//     const hospitalRegion = req.body.hospitalRegion;
+//     const query = `SELECT pxage FROM appointment WHERE apptid = ?`;
+//     const centralPool = central;
+//     let destinationPool = determinePool(hospitalRegion);
 
-    // Call the global function to set the transaction isolation level
-    Promise.all([
-        global.setSerializable(centralPool),
-        global.setSerializable(destinationPool)
-    ])
-    .then(() => {
-        // Continue with the rest of the code after the isolation level has been set
-        return Promise.all([
-            // Query to read the patient's age from the destination pool
-            new Promise((resolve, reject) => {
-                destinationPool.query(query, [apptid], (error, results, fields) => {
-                    if (error) {
-                        console.error('Error reading patient age from destination pool:', error);
-                        reject(error);
-                        return;
-                    }
-                    // Resolve with the patient's age if found, otherwise null
-                    const destinationAge = results.length > 0 ? results[0].pxage : null;
-                    resolve(destinationAge);
-                });
-            }),
-            // Query to update the patient's age in the central pool
-            new Promise((resolve, reject) => {
-                centralPool.query(`UPDATE appointment SET pxage = ? WHERE apptid = ?`, [newAge, apptid], (error, results, fields) => {
-                    if (error) {
-                        console.error('Error updating patient age in central pool:', error);
-                        reject(error);
-                        return;
-                    }
-                    resolve();
-                });
-            })
-        ]);
-    })
-    .then(([destinationAge]) => {
-        // Send response with the patient's age from the destination pool
-        res.json({ destinationAge, message: 'Concurrent read and write operations completed successfully' });
-    })
-    .catch(error => {
-        // Handle errors
-        console.error('Error:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
-    });
-});
+//     // Call the global function to set the transaction isolation level
+//     Promise.all([
+//         global.setSerializable(centralPool),
+//         global.setSerializable(destinationPool)
+//     ])
+//     .then(() => {
+//         // Continue with the rest of the code after the isolation level has been set
+//         return Promise.all([
+//             // Query to read the patient's age from the destination pool
+//             new Promise((resolve, reject) => {
+//                 destinationPool.query(query, [apptid], (error, results, fields) => {
+//                     if (error) {
+//                         console.error('Error reading patient age from destination pool:', error);
+//                         reject(error);
+//                         return;
+//                     }
+//                     // Resolve with the patient's age if found, otherwise null
+//                     const destinationAge = results.length > 0 ? results[0].pxage : null;
+//                     resolve(destinationAge);
+//                 });
+//             }),
+//             // Query to update the patient's age in the central pool
+//             new Promise((resolve, reject) => {
+//                 centralPool.query(`UPDATE appointment SET pxage = ? WHERE apptid = ?`, [newAge, apptid], (error, results, fields) => {
+//                     if (error) {
+//                         console.error('Error updating patient age in central pool:', error);
+//                         reject(error);
+//                         return;
+//                     }
+//                     resolve();
+//                 });
+//             })
+//         ]);
+//     })
+//     .then(([destinationAge]) => {
+//         // Send response with the patient's age from the destination pool
+//         res.json({ destinationAge, message: 'Concurrent read and write operations completed successfully' });
+//     })
+//     .catch(error => {
+//         // Handle errors
+//         console.error('Error:', error);
+//         res.status(500).json({ error: 'Internal Server Error' });
+//     });
+// });
 
 // Route to get hospital region by appointment ID
 app.post('/getHospitalRegion', (req, res) => {

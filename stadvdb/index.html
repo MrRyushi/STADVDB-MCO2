@@ -117,8 +117,37 @@
         </select>
         <button id="generateReport">Generate Report</button>
     </div>
+    <div id="reportsTotalAppt">
+        <!-- Report results will be displayed here -->
+    </div>
 
-    <div id="reportsResults">
+    <!-- Average Age Report -->
+    <div>
+        <label for="averageAge">Average Age:</label>
+        <select id="averageAge">
+            <option value="all">All Regions</option>
+            <option value="luzon">Luzon</option>
+            <option value="visayas">Visayas</option>
+            <option value="mindanao">Mindanao</option>
+        </select>
+        <button id="generateAgeReport">Generate Age Report</button>
+    </div>
+    <div id="reportsAverageAge">
+        <!-- Report results will be displayed here -->
+    </div>
+
+    <!-- Gender Distribution Report -->
+    <div>
+        <label for="genderDistribution">Gender Distribution:</label>
+        <select id="genderDistribution">
+            <option value="all">All Regions</option>
+            <option value="luzon">Luzon</option>
+            <option value="visayas">Visayas</option>
+            <option value="mindanao">Mindanao</option>
+        </select>
+        <button id="generateGenderReport">Generate Gender Report</button>
+    </div>
+    <div id="reportsGender">
         <!-- Report results will be displayed here -->
     </div>
 
@@ -158,11 +187,13 @@
 
     <h2>Case 3: Updating the Same Data Item in Two Nodes (Patient Age)</h2>
     <div>
-        <select id="dropdown3">
-            <option value="" disabled selected>Select an Appointment ID</option>
+        <input id="updateAge2" placeholder="Age of Patient" type="number"/>
+        <input id="updateAge3" placeholder="Age of Patient" type="number"/>
+        <select id="updateOrder">
+            <option value="central,destination">Central then Destination</option>
+            <option value="destination,central">Destination then Central</option>
         </select>
-        <input id="updateAge2" placeholder="New Age of Patient" type="number"/>
-        <button id="updatePatientAge">Update</button>
+        <button id="updatePatientAge2">Update</button>
     </div>
 
     <div id="updatedAgeResults2">
