@@ -94,12 +94,13 @@ function checkAppointmentExists(pool, apptid, callback) {
 app.post('/insertAppt', async (req, res) => {
     const data = req.body;
     const hospitalRegion = data.hospitalRegion;
-    console.log(data);
+    console.log('what the fuck is this',data);
 
     let sourcePool = central;
     let destinationPool = determinePool(hospitalRegion)
     let island = determineIsland(hospitalRegion);
 
+    console.log('data.hospitalregion: ' + data.hospitalregion)
     // Check if the appointment ID already exists
     checkAppointmentExists(sourcePool, data.apptid, (appointmentExists) => {
         if (appointmentExists) {
