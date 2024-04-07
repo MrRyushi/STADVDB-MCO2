@@ -152,10 +152,8 @@ document.addEventListener("DOMContentLoaded", function() {
         // Clear the value of the input field
         apptidInput.value = '';
     });
-    
 
     //const selectedRegion = document.getElementById('regionSelect').value
-
     function convertFormDataToJson(formData) {
         const jsonData = {};
         formData.forEach((value, key) => {
@@ -163,7 +161,6 @@ document.addEventListener("DOMContentLoaded", function() {
         });
         return jsonData;
     }
-
 
     function fetchData(url) {
         return fetch(url)

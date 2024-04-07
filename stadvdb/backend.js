@@ -365,11 +365,19 @@ app.post('/updateAge', (req, res) => {
                     });
                 } else {
                     if (shouldSimulateFailure()) {
-                        console.error('Simulating failure in writing to central node');
-                        throw new Error('Error updating central node - simulated failure');
+                        try {
+                            throwError('central')
+                        } 
+                        catch (e) {                    
+                            console.error(e);
+                            writeLogs(apptid, newAge, 'central');
+                            resolve(); // Resolve even if no update was performed
+                    
+                        }
+                    } else {
+                        writeLogs(apptid, newAge, 'central');
+                        resolve(); // Resolve even if no update was performed
                     }
-                    writeLogs(apptid, newAge, 'central');
-                    resolve(); // Resolve even if no update was performed
                 }
             }),
             // Second query to update
@@ -387,16 +395,24 @@ app.post('/updateAge', (req, res) => {
                         });
                     } else {
                         if (shouldSimulateFailure()) {
-                            console.error(`Simulating failure in writing to Luzon column (${destinationPool})`);
-                            reject(`Error updating Luzon node - simulated failure`);
-                            return;
+                           
+                            try {
+                                throwError('luzon')
+                            }
+                            catch (e) {
+                                console.error(e);
+                                writeLogs(apptid, newAge, 'luzon');
+                                resolve(); // Resolve even if no update was performed                
+                            }
                         }
-                        writeLogs(apptid, newAge, 'luzon');
-                        resolve(); // Resolve even if no update was performed
+                        else {
+                            writeLogs(apptid, newAge, 'luzon');
+                            resolve(); // Resolve even if no update was performed
+                        }
+                        
                     }
                 } else if (island == 'vismin') {
-                    if (regions.visayas_mindanao) {
-                 
+                    if (regions.visayas_mindanao) {    
                         destinationPool.query(query2, [newAge, apptid], (error, results, fields) => {
                             if (error) {
                                 console.error('Error updating column:', error);
@@ -408,12 +424,20 @@ app.post('/updateAge', (req, res) => {
                         });
                     } else {
                         if (shouldSimulateFailure()) {
-                            console.error(`Simulating failure in writing to Vismin column (${destinationPool})`);
-                            reject(`Error updating Vismin node - simulated failure`);
-                            return;
+                            try {
+                                throwError('visayas_mindanao')
+                            } 
+                            catch (e) {
+                                console.error(e);
+                                writeLogs(apptid, newAge, 'visayas_mindanao');
+                                resolve(); // Resolve even if no update was performed
+                            }  
+                        } 
+                        else {
+                            writeLogs(apptid, newAge, 'visayas_mindanao');
+                            resolve(); // Resolve even if no update was performed
                         }
-                        writeLogs(apptid, newAge, 'visayas_mindanao');
-                        resolve(); // Resolve even if no update was performed
+
                     }
                 } else {
                     resolve(); // Resolve if island is not luzon or vismin
@@ -467,14 +491,17 @@ app.post('/updateAge', (req, res) => {
     });
 });
 
+function throwError(node) {
+    throw new Error(`Simulating failure in writing to ${node} node`);
+}
 // Modify shouldSimulateFailure function to return the value of the failure simulation state
 let simulateFailureToggle;
 
 function shouldSimulateFailure() {
-    if (simulateFailureToggle == true) {
+    if (simulateFailureToggle === true) {
         return true;
-    } else if (simulateFailureToggle = false) {
-        return false
+    } else if (simulateFailureToggle === false) {
+        return false;
     }
 }
 
