@@ -152,7 +152,7 @@ app.get('/averageAge', (req, res) => {
 });
 
 // Route to handle the gender distribution report
-app.get('/genderDistribution', async (req, res) => {
+app.get('/genderDistribution', (req, res) => {
     const region = req.query.region;
     let pool;
 
@@ -169,17 +169,18 @@ app.get('/genderDistribution', async (req, res) => {
             break;
     }
 
-    try {
-        const [rows] = await pool.query(`SELECT gender, COUNT(*) AS count FROM appointments GROUP BY gender`);
-        const genderDistribution = {};
-        rows.forEach(row => {
-            genderDistribution[row.gender] = row.count;
-        });
-        res.json({ genderDistribution });
-    } catch (error) {
-        console.error('Error fetching gender distribution:', error);
-        res.status(500).json({ error: 'Error fetching gender distribution' });
-    }
+    pool.query('SELECT pxgender, COUNT(*) AS count FROM appointment GROUP BY gender', (error, rows) => {
+        if (error) {
+            console.error('Error fetching gender distribution:', error);
+            res.status(500).json({ error: 'Error fetching gender distribution' });
+        } else {
+            const genderDistribution = {};
+            rows.forEach(row => {
+                genderDistribution[row.gender] = row.count;
+            });
+            res.json({ genderDistribution });
+        }
+    });
 });
 
 app.post('/insertAppt', async (req, res) => {
