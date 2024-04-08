@@ -169,15 +169,17 @@ app.get('/genderDistribution', (req, res) => {
             break;
     }
 
-    pool.query('SELECT pxgender, COUNT(*) AS count FROM appointment GROUP BY gender', (error, rows) => {
+    pool.query('SELECT pxgender, COUNT(*) AS count FROM appointment WHERE pxgender IS NOT NULL AND pxgender != \'\' AND pxgender != \'0\' GROUP BY pxgender', (error, rows) => {
         if (error) {
             console.error('Error fetching gender distribution:', error);
-            res.status(500).json({ error: 'Error fetching gender distribution' });
+            return res.status(500).json({ error: 'Error fetching gender distribution' });
         } else {
             const genderDistribution = {};
             rows.forEach(row => {
-                genderDistribution[row.gender] = row.count;
+                console.log('Row:', row); // Add this line to log each row
+                genderDistribution[row.pxgender] = row.count;
             });
+            console.log('Gender Distribution:', genderDistribution);
             res.json({ genderDistribution });
         }
     });

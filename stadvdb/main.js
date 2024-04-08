@@ -120,15 +120,24 @@ document.addEventListener("DOMContentLoaded", function() {
             });
     }
 
-    // Function to generate the gender distribution report
+  // Function to generate the gender distribution report
     generateGenderReport.addEventListener('click', generateGenderDistributionReport);
     function generateGenderDistributionReport() {
         const selectedRegion = document.querySelector("#genderDistribution").value;
         const url = 'http://localhost:3000/genderDistribution' + (selectedRegion !== 'all' ? `?region=${selectedRegion}` : '');
 
         fetch(url)
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
             .then(data => {
+                if (!data.genderDistribution) {
+                    throw new Error('Invalid response format');
+                }
+                console.log('Received Gender Distribution:', data.genderDistribution);
                 // Display the data in the `#reportsGender` div
                 let genderDistributionHTML = "<p>Gender Distribution:</p><ul>";
                 for (const gender in data.genderDistribution) {
