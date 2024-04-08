@@ -94,11 +94,10 @@ function checkAppointmentExists(pool, apptid, callback) {
 }
 
 // Route to handle the total appointments report
-app.get('/totalCountAppointments', async (req, res) => {
+app.get('/totalCountAppointments', (req, res) => {
     const region = req.query.region;
     let pool;
 
-    // Select appropriate pool based on the region
     switch(region) {
         case 'luzon':
             pool = luzon;
@@ -111,18 +110,19 @@ app.get('/totalCountAppointments', async (req, res) => {
             break;
     }
 
-    try {
-        const [rows] = await pool.query('SELECT COUNT(*) AS totalAppointments FROM appointments');
-        const totalAppointments = rows[0].totalAppointments;
-        res.json({ totalAppointments });
-    } catch (error) {
-        console.error('Error fetching total appointments:', error);
-        res.status(500).json({ error: 'Error fetching total appointments' });
-    }
+    pool.query('SELECT COUNT(*) AS totalAppointments FROM appointment', (error, rows) => {
+        if (error) {
+            console.error('Error fetching total appointments:', error);
+            res.status(500).json({ error: 'Error fetching total appointments' });
+        } else {
+            const totalAppointments = rows[0].totalAppointments;
+            res.json({ totalAppointments });
+        }
+    });
 });
 
 // Route to handle the average age report
-app.get('/averageAge', async (req, res) => {
+app.get('/averageAge', (req, res) => {
     const region = req.query.region;
     let pool;
 
@@ -139,15 +139,16 @@ app.get('/averageAge', async (req, res) => {
             break;
     }
 
-    try {
-        const [rows] = await pool.query(`SELECT AVG(age) AS averageAge FROM appointments`);
-        const averageAge = rows[0].averageAge;
-        console.log("im in");
-        res.json({ averageAge });
-    } catch (error) {
-        console.error('Error fetching average age:', error);
-        res.status(500).json({ error: 'Error fetching average age' });
-    }
+    pool.query('SELECT AVG(pxage) AS averageAge FROM appointment', (error, rows) => {
+        if (error) {
+            console.error('Error fetching average age:', error);
+            res.status(500).json({ error: 'Error fetching average age' });
+        } else {
+            const averageAge = rows[0].averageAge;
+            console.log("im in");
+            res.json({ averageAge });
+        }
+    });
 });
 
 // Route to handle the gender distribution report
