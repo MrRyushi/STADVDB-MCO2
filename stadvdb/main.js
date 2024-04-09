@@ -91,7 +91,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
         function generateTotalCountAppointmentsReport() {
             const selectedRegion = document.querySelector("#totalAppointments").value;
-            const url = 'http://localhost:3000/totalCountAppointments' + (selectedRegion !== 'all' ? `?region=${selectedRegion}` : '');
+            console.log(selectedRegion)
+            const url = 'http://localhost:3000/totalCountAppointments?region=' + selectedRegion;
 
             fetch(url)
                 .then(response => response.json())

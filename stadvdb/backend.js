@@ -95,14 +95,16 @@ function checkAppointmentExists(pool, apptid, callback) {
 
 // Route to handle the total appointments report
 app.get('/totalCountAppointments', (req, res) => {
+    console.log(req.query)
     const region = req.query.region;
+    console.log("region:" + region);
     let pool;
 
     switch(region) {
-        case 'luzon':
+        case 'luzon': // Corrected to string
             pool = luzon;
             break;
-        case 'vismin':
+        case 'vismin': // Corrected to string
             pool = vismin;
             break;
         default:
@@ -110,6 +112,7 @@ app.get('/totalCountAppointments', (req, res) => {
             break;
     }
 
+    console.log(pool)
     pool.query('SELECT COUNT(*) AS totalAppointments FROM appointment', (error, rows) => {
         if (error) {
             console.error('Error fetching total appointments:', error);
@@ -124,6 +127,7 @@ app.get('/totalCountAppointments', (req, res) => {
 // Route to handle the average age report
 app.get('/averageAge', (req, res) => {
     const region = req.query.region;
+    console.log("region:" + region);
     let pool;
 
     // Select appropriate pool based on the region
@@ -187,14 +191,15 @@ app.get('/genderDistribution', (req, res) => {
 
 app.post('/insertAppt', async (req, res) => {
     const data = req.body;
-    const hospitalRegion = data.hospitalRegion;
-    console.log('what the fuck is this',data);
+    console.log(data);
+    const hospitalRegion = data.hospitalregion;
+    console.log(hospitalRegion);
 
     let sourcePool = central;
     let destinationPool = determinePool(hospitalRegion)
     let island = determineIsland(hospitalRegion);
 
-    console.log('data.hospitalregion: ' + data.hospitalregion)
+
     // Check if the appointment ID already exists
     checkAppointmentExists(sourcePool, data.apptid, (appointmentExists) => {
         if (appointmentExists) {
@@ -216,6 +221,7 @@ app.post('/insertAppt', async (req, res) => {
                                 writeLogs(data.apptid, data, 'visayas_mindanao');
                             } else {
                                 syncInsertAppointmentData(destinationPool, data);
+                                console.log("YES")
                             }
                         }
 
