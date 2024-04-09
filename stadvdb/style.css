@@ -1,0 +1,6 @@
+.dropdown {
+    height: 100px;
+    /* Set a fixed height for the dropdown */
+    overflow-y: auto;
+    /* Add a vertical scrollbar when needed */
+}

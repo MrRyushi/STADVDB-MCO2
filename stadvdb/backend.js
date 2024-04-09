@@ -415,6 +415,7 @@ app.post('/readAge', (req, res) => {
     })
     .then(([centralAge, destinationAge]) => {
         // Send response with patient age from both pools
+        console.log("HEY" + centralAge + destinationAge)
         res.json({
             centralAge: centralAge,
             destinationAge: destinationAge,

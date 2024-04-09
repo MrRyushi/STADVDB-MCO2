@@ -174,14 +174,15 @@
         <select id="dropdown2">
             <option value="" disabled selected>Select an Appointment ID</option>
         </select>
-        <input id="updateAge" placeholder="New Age of Patient" type="number"/>
-        <button id="updatePatientAge">Read and Update</button>
+        <input id="updateAge" placeholder="New Age of Patient" type="number" min="0"/>
+        <button id="updatePatientAge">Update</button>
     </div>
 
     <div id="updatedAgeResults">
         <!-- Updated Patient age results will be displayed here -->
     </div>
 
+    <h2>Configuration</h2>
     <div>
         <button id="centralBtn">Turn Off Central</button>
         <button id="luzonBtn">Turn Off Luzon</button>
@@ -192,6 +193,10 @@
     <div>
         <button id="simulateFailureCentral">Simulate Failure Central is Off</button>
         <button id="simulateFailureLuzonVizMin">Simulate Failure Luzon / VizMin is Off</button>
+    </div>
+
+    <div>
+        <button id="debugMode">Debug Mode Off</button>
     </div>
 
 

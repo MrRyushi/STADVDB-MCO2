@@ -269,21 +269,51 @@ document.addEventListener("DOMContentLoaded", function() {
         divToDisplay.innerHTML = ''; // Clear previous read age results
         
         // Check if data is not empty and contains age information
-        if (data.centralAge || data.destinationAge) {
-            // Create paragraph elements to hold the age results
-            const centralAgeParagraph = document.createElement('p');
-            centralAgeParagraph.textContent = `Patient Age from Central Pool: ${data.centralAge}`;
-            
-            const destinationAgeParagraph = document.createElement('p');
-            destinationAgeParagraph.textContent = `Patient Age from Destination Pool: ${data.destinationAge}`;
-        
-            // Append the paragraphs to the read age results div
-            divToDisplay.appendChild(centralAgeParagraph);
-            divToDisplay.appendChild(destinationAgeParagraph);
-        } else {
-            // If no data found or missing age information, display a message
-            divToDisplay.textContent = 'No valid age information found.';
-        }
+        console.log("YO" + data.centralAge)
+             // Check if data is not empty and contains age information
+             if(debugMode === true) {
+                if (data.centralAge || data.destinationAge) {
+                    // Create paragraph elements to hold the age results
+                    const centralAgeParagraph = document.createElement('p');
+                    centralAgeParagraph.textContent = `Patient Age from Central Pool: ${data.centralAge}`;
+                    
+                    const destinationAgeParagraph = document.createElement('p');
+                    destinationAgeParagraph.textContent = `Patient Age from Destination Pool: ${data.destinationAge}`;
+                
+                    // Append the paragraphs to the read age results div
+                    divToDisplay.appendChild(centralAgeParagraph);
+                    divToDisplay.appendChild(destinationAgeParagraph);
+                } else {
+                    // If no data found or missing age information, display a message
+                    divToDisplay.textContent = 'No valid age information found.';
+                }
+            }
+    
+            else if (debugMode === false){
+                if (data.centralAge || data.destinationAge) {
+                    
+                    if (data.centralAge != undefined) {
+                        // Create paragraph elements to hold the age results
+                        const centralAgeParagraph = document.createElement('p');
+                        centralAgeParagraph.textContent = `Patient Age: ${data.centralAge}`;
+                                   
+                        // Append the paragraphs to the read age results div
+                        divToDisplay.appendChild(centralAgeParagraph); 
+                    }
+                    else if (data.destinationAge != undefined) {
+                        // Create paragraph elements to hold the age results
+                        const destinationAgeParagraph = document.createElement('p');
+                        destinationAgeParagraph.textContent = `Patient Age: ${data.destinationAge}`;
+                    
+                        // Append the paragraphs to the read age results div
+                        divToDisplay.appendChild(destinationAgeParagraph);
+                    } 
+    
+                } else {
+                    // If no data found or missing age information, display a message
+                    divToDisplay.textContent = 'No valid age information found.';
+                }
+            }
     }
 
     function displayUpdatedAgeResults(data) {
@@ -293,26 +323,70 @@ document.addEventListener("DOMContentLoaded", function() {
         divToDisplay.innerHTML = ''; // Clear previous read age results
         
         // Check if data is not empty and contains age information
-        if (data.centralAge && data.destinationAge) {
-            // Create paragraph elements to hold the age results
-            const centralAgeParagraph = document.createElement('p');
-            centralAgeParagraph.textContent = `Patient Age from Central Pool: ${data.centralAge}`;
+        if(debugMode === true) {
+            if (data.centralAge || data.destinationAge) {
+                // Create paragraph elements to hold the age results
+                const centralAgeParagraph = document.createElement('p');
+                centralAgeParagraph.textContent = `Patient Age from Central Pool: ${data.centralAge}`;
+                
+                const destinationAgeParagraph = document.createElement('p');
+                destinationAgeParagraph.textContent = `Patient Age from Destination Pool: ${data.destinationAge}`;
             
-            const destinationAgeParagraph = document.createElement('p');
-            destinationAgeParagraph.textContent = `Patient Age from Destination Pool: ${data.destinationAge}`;
-        
-            // Append the paragraphs to the read age results div
-            divToDisplay.appendChild(centralAgeParagraph);
-            divToDisplay.appendChild(destinationAgeParagraph);
-        } else {
-            // If no data found or missing age information, display a message
-            divToDisplay.textContent = 'No valid age information found.';
+                // Append the paragraphs to the read age results div
+                divToDisplay.appendChild(centralAgeParagraph);
+                divToDisplay.appendChild(destinationAgeParagraph);
+            } else {
+                // If no data found or missing age information, display a message
+                divToDisplay.textContent = 'No valid age information found.';
+            }
         }
+
+        else if (debugMode === false){
+            if (data.centralAge || data.destinationAge) {
+                
+                if (data.centralAge != undefined) {
+                    // Create paragraph elements to hold the age results
+                    const centralAgeParagraph = document.createElement('p');
+                    centralAgeParagraph.textContent = `Patient Age: ${data.centralAge}`;
+                               
+                    // Append the paragraphs to the read age results div
+                    divToDisplay.appendChild(centralAgeParagraph); 
+                }
+                else if (data.destinationAge != undefined) {
+                    // Create paragraph elements to hold the age results
+                    const destinationAgeParagraph = document.createElement('p');
+                    destinationAgeParagraph.textContent = `Patient Age: ${data.destinationAge}`;
+                
+                    // Append the paragraphs to the read age results div
+                    divToDisplay.appendChild(destinationAgeParagraph);
+                } 
+
+            } else {
+                // If no data found or missing age information, display a message
+                divToDisplay.textContent = 'No valid age information found.';
+            }
+        }
+       
     }
     
-    
+    let debugMode = false;
+    document.getElementById('debugMode').addEventListener('click', toggleDebugMode);
+    // Function to toggle debug mode
+    function toggleDebugMode() {
+        debugMode = !debugMode;
+        
+        // Change button text based on debug mode state
+        const button = document.getElementById('debugMode');
+        button.textContent = debugMode ? 'Debug Mode On' : 'Debug Mode Off';
+    }
+
+   
     document.getElementById('readPatientAge').addEventListener('click', function() {
         let apptIdToRead = document.getElementById('dropdown1').value;
+        const divToDisplay = document.getElementById('readAgeResults');
+    
+        divToDisplay.innerHTML = ''; // Clear previous read age results
+
         console.log(apptIdToRead);
     
          // Fetch hospital region by appointment ID
@@ -371,6 +445,8 @@ document.addEventListener("DOMContentLoaded", function() {
     document.getElementById('updatePatientAge').addEventListener('click', function() {
         let apptIdToUpdate = document.getElementById('dropdown2').value;
         console.log(apptIdToUpdate);
+        const divToDisplay = document.getElementById('updatedAgeResults');
+        divToDisplay.innerHTML = ''; // Clear previous read age results
         let ageToUpdate = document.getElementById('updateAge').value;
     
         // Fetch hospital region by appointment ID
