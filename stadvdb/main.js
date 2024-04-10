@@ -292,7 +292,7 @@ document.addEventListener("DOMContentLoaded", function() {
             else if (debugMode === false){
                 if (data.centralAge || data.destinationAge) {
                     
-                    if (data.centralAge != undefined) {
+                    if (data.centralAge !== undefined && simulateFailureCentral === false) {
                         // Create paragraph elements to hold the age results
                         const centralAgeParagraph = document.createElement('p');
                         centralAgeParagraph.textContent = `Patient Age: ${data.centralAge}`;
@@ -300,7 +300,7 @@ document.addEventListener("DOMContentLoaded", function() {
                         // Append the paragraphs to the read age results div
                         divToDisplay.appendChild(centralAgeParagraph); 
                     }
-                    else if (data.destinationAge != undefined) {
+                    else if (data.destinationAge !== undefined && simulateFailureLuzonVizMin === false) {
                         // Create paragraph elements to hold the age results
                         const destinationAgeParagraph = document.createElement('p');
                         destinationAgeParagraph.textContent = `Patient Age: ${data.destinationAge}`;
