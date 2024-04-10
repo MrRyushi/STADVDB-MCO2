@@ -241,11 +241,28 @@ app.post('/insertAppt', async (req, res) => {
 // Route to handle searching data
 app.post('/searchAppt', (req, res) => {
     const data = req.body;
+    const hospitalRegion = data.hospitalregion;
 
     console.log('Received search request:', data);
     console.log(data)
 
-    let poolToUse = central
+    let poolToUse;
+
+    if(!regions.central) {
+        switch(hospitalRegion) {
+            case 'luzon':
+                poolToUse = luzon;
+                break;
+            case 'vismin':
+                poolToUse = vismin;
+                break;
+            default:
+                poolToUse = central;
+                break;
+        } 
+    } else {
+        poolToUse = central;
+    }
 
     // Construct SQL query to search only for apptid
     let query = `SELECT * FROM appointment WHERE apptid = '${data.apptid}'`;
