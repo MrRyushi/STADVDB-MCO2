@@ -293,28 +293,64 @@ app.put('/updateAppt', async (req, res) => {
     }
     let sourcePool = central;
     let destinationPool = determinePool(hospitalRegion)
+    let island = determineIsland(hospitalRegion);
 
     // Check if the appointment ID already exists
     checkAppointmentExists(sourcePool, data.apptid, (appointmentExists) => {
         if (!appointmentExists) {
             return res.status(400).json({ error: 'Appointment ID does not exist' });
         } else {
-            sourcePool.query(`UPDATE appointment SET apptdate = ?, pxid = ?, pxage = ?, pxgender = ?, doctorid = ?, hospitalname = ?, hospitalcity = ?, hospitalprovince = ?, hospitalregion = ? WHERE apptid = ?`, [data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion, data.apptid], (err, result) => {
-                if (err) {
-                    console.error('Error updating data in source:', err);
-                    return res.status(500).json({ error: 'Error updating data in source' });
-                } else {
-                    console.log('Data updated in source successfully:', result);
-
-                    // Synchronize updated data
-                    if (destinationPool != central) {
-                        syncUpdateAppointmentData(destinationPool, data); // Make sure you have this function defined
+            if (regions.central) {
+                sourcePool.query(`UPDATE appointment SET apptdate = ?, pxid = ?, pxage = ?, pxgender = ?, doctorid = ?, hospitalname = ?, hospitalcity = ?, hospitalprovince = ?, hospitalregion = ? WHERE apptid = ?`, [data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion, data.apptid], (err, result) => {
+                    if (err) {
+                        console.error('Error updating data in source:', err);
+                        return res.status(500).json({ error: 'Error updating data in source' });
+                    } else {
+                        console.log('Data updated in source successfully:', result);
+            
+                        // Check if hospital region has changed
+                        if (data.hospitalregion !== hospitalRegion) {
+                            console.log('Hospital region has changed. New region:', data.hospitalregion);
+                            let newIsland = determineIsland(data.hospitalregion);
+                            console.log('New island:', newIsland);
+                            let newDestinationPool = determinePool(data.hospitalregion);
+                            console.log('New destination pool:', newDestinationPool);
+            
+                            // Delete previous appointment data associated with the old hospital region
+                            sourcePool.query(`DELETE FROM appointment WHERE apptid = ? AND hospitalregion = ?`, [data.apptid, hospitalRegion], (deleteErr, deleteResult) => {
+                                if (deleteErr) {
+                                    console.error('Error deleting previous appointment data:', deleteErr);
+                                    return res.status(500).json({ error: 'Error deleting previous appointment data' });
+                                } else {
+                                    console.log('Previous appointment data deleted successfully for hospital region:', hospitalRegion);
+                                }
+                            });
+            
+                            // Insert updated appointment data into the new island's database
+                            if (newIsland == 'luzon' && !regions.luzon) {
+                                writeLogs(data.apptid, data, 'luzon');
+                            } else if (newIsland == 'vismin' && !regions.visayas_mindanao) {
+                                writeLogs(data.apptid, data, 'visayas_mindanao');
+                            } else {
+                                newDestinationPool.query(`INSERT INTO appointment (apptid, apptdate, pxid, pxage, pxgender, doctorid, hospitalname, hospitalcity, hospitalprovince, hospitalregion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [data.apptid, data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion], (insertErr, insertResult) => {
+                                    if (insertErr) {
+                                        console.error('Error inserting data into new destination:', insertErr);
+                                        return res.status(500).json({ error: 'Error inserting data into new destination' });
+                                    } else {
+                                        console.log('Data inserted into new destination successfully:', insertResult);
+                                    }
+                                });
+                            }
+                        }
+            
+                        res.json({ message: 'Data updated successfully' });
                     }
-
-                    res.json({ message: 'Data updated successfully' });
-                }
-            });
-        }
+                });
+            } else {
+                writeLogs(data.apptid, data, 'central');
+                res.json({ message: 'Data written to logs successfully' });
+            }
+        }            
     });
 });
 
