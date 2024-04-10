@@ -199,13 +199,12 @@ app.post('/insertAppt', async (req, res) => {
     let destinationPool = determinePool(hospitalRegion)
     let island = determineIsland(hospitalRegion);
 
-
     // Check if the appointment ID already exists
     checkAppointmentExists(sourcePool, data.apptid, (appointmentExists) => {
         if (appointmentExists) {
             return res.status(400).json({ error: 'Appointment ID already exists' });
         } else {
-            if (regions.central) {
+            if (regions.central && !simulateFailureCentral) {
                 sourcePool.query(`INSERT INTO appointment (apptid, apptdate, pxid, pxage, pxgender, doctorid, hospitalname, hospitalcity, hospitalprovince, hospitalregion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [data.apptid, data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion], (err, result) => {
                     if (err) {
                         console.error('Error inserting data into source:', err);
@@ -216,9 +215,9 @@ app.post('/insertAppt', async (req, res) => {
                         // Synchronize inserted data
                         if (destinationPool != central) {
                             if (island == 'luzon' && !regions.luzon) {
-                                writeLogs(data.apptid, data, 'luzon');
+                                writeLogs2(data.apptid, data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion, 'luzon');
                             } else if (island == 'vismin' && !regions.visayas_mindanao) {
-                                writeLogs(data.apptid, data, 'visayas_mindanao');
+                                writeLogs2(data.apptid, data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion, 'visayas_mindanao');
                             } else {
                                 syncInsertAppointmentData(destinationPool, data);
                                 console.log("YES")
@@ -229,7 +228,7 @@ app.post('/insertAppt', async (req, res) => {
                     }
                 });
             } else {
-                writeLogs(data.apptid, data, 'central');
+                writeLogs2(data.apptid, data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion, 'central');
                 res.json({ message: 'Data written to logs successfully' });
             }
         }
@@ -281,7 +280,7 @@ app.post('/searchAppt', (req, res) => {
 
 app.put('/updateAppt', async (req, res) => {
     const data = req.body;
-    const hospitalRegion = data.hospitalregion
+    const hospitalRegion = data.hospitalregion;
     console.log(data);
 
     // Check if the required fields are present in the request body
@@ -292,65 +291,83 @@ app.put('/updateAppt', async (req, res) => {
         }
     }
     let sourcePool = central;
-    let destinationPool = determinePool(hospitalRegion)
+    let destinationPool = determinePool(hospitalRegion);
     let island = determineIsland(hospitalRegion);
 
     // Check if the appointment ID already exists
-    checkAppointmentExists(sourcePool, data.apptid, (appointmentExists) => {
+    checkAppointmentExists(sourcePool, data.apptid, async (appointmentExists) => {
         if (!appointmentExists) {
             return res.status(400).json({ error: 'Appointment ID does not exist' });
         } else {
             if (regions.central) {
-                sourcePool.query(`UPDATE appointment SET apptdate = ?, pxid = ?, pxage = ?, pxgender = ?, doctorid = ?, hospitalname = ?, hospitalcity = ?, hospitalprovince = ?, hospitalregion = ? WHERE apptid = ?`, [data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion, data.apptid], (err, result) => {
-                    if (err) {
-                        console.error('Error updating data in source:', err);
-                        return res.status(500).json({ error: 'Error updating data in source' });
-                    } else {
-                        console.log('Data updated in source successfully:', result);
-            
-                        // Check if hospital region has changed
-                        if (data.hospitalregion !== hospitalRegion) {
-                            console.log('Hospital region has changed. New region:', data.hospitalregion);
-                            let newIsland = determineIsland(data.hospitalregion);
-                            console.log('New island:', newIsland);
-                            let newDestinationPool = determinePool(data.hospitalregion);
-                            console.log('New destination pool:', newDestinationPool);
-            
+                try {
+                    await new Promise((resolve, reject) => {
+                        sourcePool.query(`UPDATE appointment SET apptdate = ?, pxid = ?, pxage = ?, pxgender = ?, doctorid = ?, hospitalname = ?, hospitalcity = ?, hospitalprovince = ?, hospitalregion = ? WHERE apptid = ?`, [data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion, data.apptid], (err, result) => {
+                            if (err) {
+                                console.error('Error updating data in source:', err);
+                                reject(err);
+                            } else {
+                                console.log('Data updated in source successfully:', result);
+                                resolve();
+                            }
+                        });
+                    });
+
+                    // Check if hospital region has changed
+                    // Check if hospital region has changed
+                    if (data.hospitalregion !== hospitalRegion) {
+                        console.log('Hospital region has changed. New region:', data.hospitalregion);
+                        let newIsland = determineIsland(data.hospitalregion);
+                        console.log('New island:', newIsland);
+                        let newDestinationPool = determinePool(data.hospitalregion);
+                        console.log('New destination pool:', newDestinationPool);
+
+                        try {
                             // Delete previous appointment data associated with the old hospital region
-                            sourcePool.query(`DELETE FROM appointment WHERE apptid = ? AND hospitalregion = ?`, [data.apptid, hospitalRegion], (deleteErr, deleteResult) => {
-                                if (deleteErr) {
-                                    console.error('Error deleting previous appointment data:', deleteErr);
-                                    return res.status(500).json({ error: 'Error deleting previous appointment data' });
-                                } else {
-                                    console.log('Previous appointment data deleted successfully for hospital region:', hospitalRegion);
-                                }
+                            await new Promise((resolve, reject) => {
+                                sourcePool.query(`DELETE FROM appointment WHERE apptid = ? AND hospitalregion = ?`, [data.apptid, hospitalRegion], (deleteErr, deleteResult) => {
+                                    if (deleteErr) {
+                                        console.error('Error deleting previous appointment data:', deleteErr);
+                                        reject(deleteErr);
+                                    } else {
+                                        console.log('Previous appointment data deleted successfully for hospital region:', hospitalRegion);
+                                        resolve();
+                                    }
+                                });
                             });
-            
+
                             // Insert updated appointment data into the new island's database
                             if (newIsland == 'luzon' && !regions.luzon) {
                                 writeLogs(data.apptid, data, 'luzon');
                             } else if (newIsland == 'vismin' && !regions.visayas_mindanao) {
                                 writeLogs(data.apptid, data, 'visayas_mindanao');
                             } else {
-                                newDestinationPool.query(`INSERT INTO appointment (apptid, apptdate, pxid, pxage, pxgender, doctorid, hospitalname, hospitalcity, hospitalprovince, hospitalregion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [data.apptid, data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion], (insertErr, insertResult) => {
-                                    if (insertErr) {
-                                        console.error('Error inserting data into new destination:', insertErr);
-                                        return res.status(500).json({ error: 'Error inserting data into new destination' });
-                                    } else {
-                                        console.log('Data inserted into new destination successfully:', insertResult);
-                                    }
+                                await new Promise((resolve, reject) => {
+                                    newDestinationPool.query(`INSERT INTO appointment (apptid, apptdate, pxid, pxage, pxgender, doctorid, hospitalname, hospitalcity, hospitalprovince, hospitalregion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [data.apptid, data.apptdate, data.pxid, data.pxage, data.pxgender, data.doctorid, data.hospitalname, data.hospitalcity, data.hospitalprovince, data.hospitalregion], (insertErr, insertResult) => {
+                                        if (insertErr) {
+                                            console.error('Error inserting data into new destination:', insertErr);
+                                            reject(insertErr);
+                                        } else {
+                                            console.log('Data inserted into new destination successfully:', insertResult);
+                                            resolve();
+                                        }
+                                    });
                                 });
                             }
+                        } catch (err) {
+                            return res.status(500).json({ error: 'Error updating data' });
                         }
-            
-                        res.json({ message: 'Data updated successfully' });
                     }
-                });
+
+                    res.json({ message: 'Data updated successfully' });
+                } catch (err) {
+                    return res.status(500).json({ error: 'Error updating data' });
+                }
             } else {
                 writeLogs(data.apptid, data, 'central');
                 res.json({ message: 'Data written to logs successfully' });
             }
-        }            
+        }
     });
 });
 
@@ -829,6 +846,33 @@ function writeLogs(apptid, age, node){
     });
 }
 
+function writeLogs2(apptid, apptdate, pxid, pxage, pxgender, doctorid, hospitalname, hospitalcity, hospitalprovince, hospitalregion, node){
+    const logsFolder = 'crash logs';
+    let fileName;
+    switch(node) {
+        case 'central': fileName='central_crash_logs.txt'; break;
+        case 'luzon': fileName='luzon_crash_logs.txt'; break;
+        case 'visayas_mindanao': fileName='visayas_mindanao_crash_logs.txt'; break;
+    }
+    const filePath = path.join(__dirname, logsFolder, fileName);
+
+    const logData = `ApptId: ${apptid}, ApptDate: ${apptdate}, PxId: ${pxid}, Age: ${pxage}, Gender: ${pxgender}, DoctorId: ${doctorid}, HospitalName: ${hospitalname}, HospitalCity: ${hospitalcity}, HospitalProvince: ${hospitalprovince}, HospitalRegion: ${hospitalregion}\n`;
+
+    // Check if the directory exists, if not, create it
+    if (!fs.existsSync(path.join(__dirname, logsFolder))) {
+        fs.mkdirSync(path.join(__dirname, logsFolder));
+    }
+
+    // Write to the file
+    fs.appendFile(filePath, logData, 'utf8', (err) => {
+        if (err) {
+            console.error('Error writing to file:', err);
+            return;
+        }
+        console.log('Data has been written to file successfully.');
+    });
+}
+
 // Route to toggle region status and handle crash logs if region is toggled back on
 app.post('/toggleRegion', (req, res) => {
     const { region, value } = req.body;
@@ -873,8 +917,12 @@ function updateDatabaseFromLogs(logs, node) {
     }
 
     logs.forEach(log => {
-        const [, apptid, age] = log.match(/ApptId: (\w+), Age:(\d+)/) || [];
-        if (apptid && age) {
+        log = log.trim(); // Trim the log entry
+        const fullMatch = log.match(/ApptId: (\w+), ApptDate: ([^,]+), PxId: (\w+), Age: (\d+), Gender: ([^,]+), DoctorId: (\w+), HospitalName: ([^,]+), HospitalCity: ([^,]+), HospitalProvince: ([^,]+), HospitalRegion: ([^,]+)/);
+        const partialMatch = log.match(/ApptId: (\w+), Age: (\d+)/);
+
+        if (partialMatch) {
+            const [, apptid, age] = partialMatch;
             const query = `UPDATE appointment SET pxage = ? WHERE apptid = ?`;
             pool.query(query, [age, apptid], (error, results) => {
                 if (error) {
@@ -883,7 +931,18 @@ function updateDatabaseFromLogs(logs, node) {
                     console.log(`Database updated successfully for appointment ID ${apptid}`);
                 }
             });
+        } else if (fullMatch) {
+            const [, apptid, apptdate, pxid, pxage, pxgender, doctorid, hospitalname, hospitalcity, hospitalprovince, hospitalregion] = fullMatch;
+            const query = `INSERT INTO appointment (apptid, apptdate, pxid, pxage, pxgender, doctorid, hospitalname, hospitalcity, hospitalprovince, hospitalregion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+            pool.query(query, [apptid, apptdate, pxid, pxage, pxgender, doctorid, hospitalname, hospitalcity, hospitalprovince, hospitalregion], (error, results) => {
+                if (error) {
+                    console.error(`Error inserting into database for appointment ID ${apptid}:`, error);
+                } else {
+                    console.log(`Database insertion successful for appointment ID ${apptid}`);
+                }
+            });
         } else {
+            console.log('PartialMatch:', partialMatch);
             console.error(`Invalid log entry: ${log}`);
         }
     });

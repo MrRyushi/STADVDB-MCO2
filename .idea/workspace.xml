@@ -5,7 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b310af73-f6a1-4e82-9489-9de66aaa6737" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/stadvdb/backend.js" beforeDir="false" afterPath="$PROJECT_DIR$/stadvdb/backend.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/stadvdb/crash logs/central_crash_logs.txt" beforeDir="false" afterPath="$PROJECT_DIR$/stadvdb/crash logs/central_crash_logs.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
