@@ -919,7 +919,7 @@ function updateDatabaseFromLogs(logs, node) {
     logs.forEach(log => {
         log = log.trim(); // Trim the log entry
         const fullMatch = log.match(/ApptId: (\w+), ApptDate: ([^,]+), PxId: (\w+), Age: (\d+), Gender: ([^,]+), DoctorId: (\w+), HospitalName: ([^,]+), HospitalCity: ([^,]+), HospitalProvince: ([^,]+), HospitalRegion: ([^,]+)/);
-        const partialMatch = log.match(/ApptId: (\w+), Age: (\d+)/);
+        const partialMatch = log.match(/ApptId:\s*(\w+)\s*, Age:\s*(\d+)\s*/);
 
         if (partialMatch) {
             const [, apptid, age] = partialMatch;
